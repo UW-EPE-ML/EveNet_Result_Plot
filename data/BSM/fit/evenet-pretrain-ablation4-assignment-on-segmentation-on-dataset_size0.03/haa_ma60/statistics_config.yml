@@ -1,0 +1,41 @@
+General:
+  Measurement: "haa_Br"
+  POI: "mu"
+  HistogramFolder: "/pscratch/sd/t/tihsu/database/exotic-higgs-decay-foundation-model-large-dataset-segmentation-pretrain/fit/evenet-pretrain-ablation4-assignment-on-segmentation-on-dataset_size0.03/haa_ma60"
+  InputPath: "/pscratch/sd/t/tihsu/database/exotic-higgs-decay-foundation-model-large-dataset-segmentation-pretrain/fit/evenet-pretrain-ablation4-assignment-on-segmentation-on-dataset_size0.03/haa_ma60/analysis_ntuple.root:{SamplePath}_MVAscore60_{RegionPath}{VariationPath}"
+  VariationPath: ""
+
+Regions:
+  - Name: "SR"
+    RegionPath: "SR"
+
+
+Samples:
+  - Name: "Pseudodata"
+    SamplePath: "QCD"
+    Data: True
+    DisableStaterror: True
+
+  - Name: "QCD"
+    SamplePath: "QCD"
+    DisableStaterror: True
+
+  - Name: "haa_ma60"
+    SamplePath: "haa_ma60"
+    DisableStaterror: True
+
+NormFactors:
+  - Name: "mu"
+    Samples: "haa_ma60"
+    Nominal: 0
+    Bounds: [0, 1]
+
+Systematics:
+  - Name: "NormQCD"
+    Up:
+      Normalization: 0.3
+    Down:
+      Normalization: -0.3
+    Type: "Normalization"
+    Samples: "QCD"
+
