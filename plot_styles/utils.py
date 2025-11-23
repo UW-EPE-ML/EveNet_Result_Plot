@@ -45,99 +45,116 @@ def apply_nature_axis_style(ax):
 
 
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
+from matplotlib.patches import Rectangle
 
 
 def plot_legend(
-        fig, active_models, train_sizes, dataset_markers, dataset_pretty, MODEL_COLORS,
-        head_order=None, HEAD_LINESTYLES=None
+        fig,
+        active_models=None,
+        train_sizes=None,
+        dataset_markers=None,
+        dataset_pretty=None,
+        model_colors=None,
+        head_order=None,
+        head_linestyles=None,
+        legends=None,  # <-- ["calibration", "dataset", "heads", "models"]
+        y_start=1.01,
+        y_gap=0.07,
 ):
-    y_start = 1.01
-    y_gap = 0.07
+    # Default: show all legends if None provided
+    if legends is None:
+        legends = ["calibration", "dataset", "heads", "models"]
 
-    # -------------------------------------------------------
-    # LEGEND 2 — Dataset Sizes
-    # -------------------------------------------------------
-    ds_handles = [
-        plt.Line2D(
-            [0], [0],
-            marker=dataset_markers[str(ds)],
-            markersize=14,
-            linestyle='',
-            color="gray",
-            markeredgecolor="black",
-            label=f"{ds}K"
+    # Unified helper: add a legend at current y_start, then shift automatically
+    def add_legend(handles, labels, ncol, fontsize=14):
+        nonlocal y_start
+        fig.legend(
+            handles,
+            labels,
+            loc="upper center",
+            bbox_to_anchor=(0.5, y_start),
+            ncol=ncol,
+            frameon=False,
+            fontsize=fontsize,
+            handletextpad=0.4,
+            columnspacing=1.5
         )
-        for ds in train_sizes
-    ]
-
-    fig.legend(
-        [plt.Line2D([], [], linestyle="none", label=r"$\bf{Dataset\ Size:}$")] + ds_handles,
-        [r"$\bf{Dataset\ Size}$"] + [f"{dataset_pretty[str(ds)]}" for ds in train_sizes],
-        loc="upper center",
-        bbox_to_anchor=(0.5, y_start + 0 * y_gap),
-        ncol=len(ds_handles) + 1,
-        frameon=False,
-        fontsize=15,
-        handletextpad=0.4,
-        columnspacing=1.5
-    )
+        y_start += y_gap  # shift down for next legend
 
     # -------------------------------------------------------
-    # LEGEND 3 - Heads
+    # 1. Calibration Legend
     # -------------------------------------------------------
-    if head_order is not None and HEAD_LINESTYLES is not None:
-        head_header = plt.Line2D(
-            [], [], linestyle="none", label=r"$\bf{Head\ Types}$"
-        )
+    if "calibration" in legends:
+        calibrated_handle = Rectangle((0, 0), 1, 1, facecolor="white", edgecolor="black")
+        uncal_handle = Rectangle((0, 0), 1, 1, facecolor="white", edgecolor="black", hatch="//")
 
+        handles = [
+            Line2D([], [], linestyle="none", label=r"$\bf{Calibration}$"),
+            calibrated_handle,
+            uncal_handle
+        ]
+        labels = [r"$\bf{Calibration}$", "Calibrated", "Uncalibrated"]
+        add_legend(handles, labels, ncol=3, fontsize=15)
+
+    # -------------------------------------------------------
+    # 2. Dataset Size Legend
+    # -------------------------------------------------------
+    if "dataset" in legends and dataset_markers is not None and dataset_pretty is not None:
+        ds_handles = [
+            Line2D(
+                [0], [0],
+                marker=dataset_markers[str(ds)],
+                markersize=14,
+                linestyle='',
+                color="gray",
+                markeredgecolor="black",
+            )
+            for ds in train_sizes
+        ]
+
+        handles = [Line2D([], [], linestyle="none", label=r"$\bf{Dataset\ Size}$")] + ds_handles
+        labels = [r"$\bf{Dataset\ Size}$"] + [dataset_pretty[str(ds)] for ds in train_sizes]
+
+        add_legend(handles, labels, ncol=len(ds_handles) + 1, fontsize=15)
+
+    # -------------------------------------------------------
+    # 3. Head Types Legend
+    # -------------------------------------------------------
+    if "heads" in legends and head_order is not None and head_linestyles is not None:
+        head_header = Line2D([], [], linestyle="none", label=r"$\bf{Head\ Types}$")
         head_handles = [
-            plt.Line2D(
+            Line2D(
                 [0], [0],
                 color="black",
-                linestyle=HEAD_LINESTYLES[h],
-                # marker=markers[h],
-                # markerfacecolor="black",
-                # markeredgecolor="black",
-                # markersize=9,
+                linestyle=head_linestyles[h],
                 linewidth=2,
                 label=h
             ) for h in head_order
         ]
 
-        fig.legend(
-            handles=[head_header] + head_handles,
-            loc="upper center",
-            bbox_to_anchor=(0.5, y_start + y_gap),
-            ncol=len(head_handles) + 1,
-            frameon=False,
-            fontsize=15,
-            handletextpad=0.4,
-            columnspacing=1.5
-        )
+        handles = [head_header] + head_handles
+        labels = [r"$\bf{Head\ Types}$"] + head_order
+
+        add_legend(handles, labels, ncol=len(head_handles) + 1, fontsize=15)
 
     # -------------------------------------------------------
-    # LEGEND 1 — Model Types
+    # 4. Model Types Legend
     # -------------------------------------------------------
-    model_handles = [
-        plt.Line2D(
-            [0], [0], marker='s',
-            markersize=14,
-            linestyle='',
-            color=MODEL_COLORS[m],
-            markeredgecolor="black",
-            label=m
-        )
-        for m in active_models
-    ]
+    if "models" in legends and active_models is not None and model_colors is not None:
+        model_handles = [
+            Line2D(
+                [0], [0],
+                marker='s',
+                markersize=14,
+                linestyle='',
+                color=model_colors[m],
+                markeredgecolor="black",
+            )
+            for m in active_models
+        ]
 
-    fig.legend(
-        [plt.Line2D([], [], linestyle="none", label=r"$\bf{Model\ Types}$")] + model_handles,
-        [r"$\bf{Model\ Types}$"] + [m for m in active_models],
-        loc="upper center",
-        bbox_to_anchor=(0.5, y_start + 2 * y_gap),
-        ncol=len(model_handles) + 1,
-        frameon=False,
-        fontsize=15,
-        handletextpad=0.4,
-        columnspacing=1.5
-    )
+        handles = [Line2D([], [], linestyle="none", label=r"$\bf{Model\ Types}$")] + model_handles
+        labels = [r"$\bf{Model\ Types}$"] + active_models
+
+        add_legend(handles, labels, ncol=len(model_handles) + 1, fontsize=15)

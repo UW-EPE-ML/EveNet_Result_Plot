@@ -3,11 +3,12 @@ import json
 import os
 import pandas as pd
 import numpy as np
+from functools import reduce
 
 from plot_styles.loss_line import plot_loss
 from plot_styles.bar_line_two_panel import plot_bar_line
 from plot_styles.sic import sic_plot
-
+from plot_styles.ad_bar import plot_ad_sig_summary, plot_ad_gen_summary
 
 def convert_epochs_to_steps(epoch, train_size, batch_size_per_GPU=1024, GPUs=16):
     effective_step = (epoch * train_size * 1000 / (batch_size_per_GPU * GPUs))
@@ -105,10 +106,6 @@ def read_bsm_data(folder_path):
     }
 
     HEAD_NAME_MAPPING = {
-        # {"name": "Cls", "use_assignment": False, "use_segmentation": False},
-        # {"name": "Cls + Seg", "use_assignment": False, "use_segmentation": True},
-        # {"name": "Cls + Assg", "use_assignment": True, "use_segmentation": False},
-        # {"name": "Cls + Seg + Assg", "use_assignment": True, "use_segmentation": True},
         (False, False): "Cls",
         (False, True): "Cls+Seg",
         (True, False): "Cls+Assign",
@@ -129,8 +126,6 @@ def read_bsm_data(folder_path):
         row = {
             "model": MODEL_NAME_MAPPING[params["model"]],
             "raw_model": params["model"],
-            # "assignment": params["assignment"] == "on",
-            # "segmentation": params["segmentation"] == "on",
             "head": HEAD_NAME_MAPPING[(params["assignment"] == "on", params["segmentation"] == "on")],
             "raw_dataset_size": params["size"],
             "train_size": int(float(params["size"]) * total_N),
@@ -138,7 +133,6 @@ def read_bsm_data(folder_path):
 
         return row
 
-    dummy_epoch = 50
     total_N = 1_000  # in thousands
 
     # -- Loss Summary -- #
@@ -159,8 +153,6 @@ def read_bsm_data(folder_path):
             for mass, heads in loss_data.items():
                 row = {
                     "mass_a": mass,
-                    # "epoch": dummy_epoch,
-                    # "effective_step": epoch_data.get(folder, dummy_epoch),
                     **folder_info,
                     **{
                         (f"{h}_loss" if "loss" not in h else "val_loss"): v
@@ -215,23 +207,39 @@ def read_bsm_data(folder_path):
                 sic_rows.append(row)
     df_sic = pd.DataFrame(sic_rows)
 
-    # Merge loss and sic dataframes according to model, assignment, segmentation, train_size, mass_a
-    df = pd.merge(
-        df_loss,
-        df_sic,
-        on=["model", "head", "train_size", "mass_a"],
-        how="outer"
-    )
+    # -- Pairing Suumary -- #
+    pairing_rows = []
+    root = os.path.join(folder_path, "assignment_metrics")
+    for dir_path, folders, _ in os.walk(root):
+        for folder in folders:
+            pairing_path = os.path.join(dir_path, folder, "summary.json")
+            if not os.path.isfile(pairing_path):
+                continue
 
-    # df['effective_step'] = df.apply(
-    #     lambda row: convert_epochs_to_steps(
-    #         row['epoch'],
-    #         row['train_size'],  # full dataset size is 432k
-    #         batch_size_per_GPU=2048,
-    #         GPUs=4,
-    #     ),
-    #     axis=1
-    # )
+            folder_info = get_name(folder)
+            if folder_info is None:
+                continue
+
+            with open(pairing_path, 'r') as f:
+                pairing_data = json.load(f)
+
+            for mass, metrics in pairing_data.items():
+                row = {
+                    "mass_a": mass.replace("haa_ma", ""),
+                    **folder_info,
+                    **{
+                        "pairing" if 'unc' not in k else "pairing_unc": v * 100 for k, v in metrics.items()
+                        if "*a" in k and "event_purity" in k
+                    }
+                }
+                pairing_rows.append(row)
+    df_pairing = pd.DataFrame(pairing_rows)
+
+    # Merge loss and sic dataframes according to model, assignment, segmentation, train_size, mass_a
+    dfs = [df_loss, df_sic, df_pairing]
+    keys = ["model", "head", "train_size", "mass_a"]
+
+    df = reduce(lambda left, right: pd.merge(left, right, on=keys, how="outer"), dfs)
 
     return df
 
@@ -251,7 +259,7 @@ def plot_bsm_results(data):
         model_order=BSM_MODEL,
         dataset_markers=BSM_DATASET_MARKERS,
         dataset_pretty=BSM_DATASET_PRETTY,
-        fig_size=(11, 5), plot_dir="plot/BSM", f_name="loss.pdf",
+        fig_size=(13, 7), plot_dir="plot/BSM", f_name="loss.pdf",
         multi_panel_config={
             "n_rows": 1,
             "n_cols": 2,
@@ -262,6 +270,27 @@ def plot_bsm_results(data):
         },
         grid=True,
         with_legend=True,
+    )
+
+    plot_bar_line(
+        data_df=data[data["mass_a"] == "30"],
+        metric="pairing",
+        model_order=BSM_MODEL,
+        train_sizes=BSM_TRAIN_SIZE,
+        dataset_markers=BSM_DATASET_MARKERS,
+        dataset_pretty=BSM_DATASET_PRETTY,
+        head_order=["Cls+Assign", "Cls+Assign+Seg"],
+        y_label="Pairing Efficiency [%]",
+        y_min=(65, 50),
+        logx=True,
+        panel_ratio=(2, 2),  # << tunable left:right panel ratio
+        bar_margin=10.0,  # << bars closer to boundary
+        bar_width=5.0,  # << slimmer bars
+        bar_spacing=5.5,
+        x_range=[2.5, 1.5],  # << small gap between bars,
+        x_indicator=2.5e2,  # << typical dataset size indicator
+        plot_dir="plot/BSM",
+        f_name="pair.pdf"
     )
 
     sic_plot(
@@ -278,9 +307,126 @@ def plot_bsm_results(data):
     )
 
 
+def read_ad_data(file_path):
+    AD_MODEL_MAPPING = {
+        "EveNet-f.t.(SSL)": "SSL",
+        "EveNet-f.t.(Cls+Gen)": "Nominal",
+        "EveNet-f.t.(Cls+Gen+Assign)": "Ablation",
+        "EveNet-scratch": "Scratch",
+    }
+
+    ad_sig = os.path.join(file_path, "significance_summary.json")
+    if os.path.isfile(ad_sig):
+        with open(ad_sig) as f:
+            ad_sig_data = json.load(f)
+
+    def compute_channel_significance(model_stats, cl=0.68):
+        """
+        Compute median and 68% CL per model per channel.
+        Returns a DataFrame: model | channel | median | lower | upper
+        """
+        records = []
+        for model, channels in model_stats.items():
+            for channel, qvals in channels.items():
+                q2 = qvals
+                lower_p = (1 - cl) / 2 * 100
+                upper_p = (1 + cl) / 2 * 100
+                median = np.median(q2)
+                lower = np.percentile(q2, lower_p)
+                upper = np.percentile(q2, upper_p)
+
+                m = re.match(r"train-(OS|SS)-test-(OS|SS)", channel)
+                train_type, test_type = m.groups()
+
+                records.append({
+                    "raw_model": model,
+                    "model": AD_MODEL_MAPPING.get(model.replace('-calibrated', ''), model),
+                    "calibrated": True if "-calibrated" in model.lower() else False,
+                    "channel": channel,
+                    "train_type": train_type,
+                    "test_type": test_type,
+                    "median": median,
+                    "lower": lower,
+                    "upper": upper,
+                    "number": len(qvals)
+                })
+        return pd.DataFrame(records)
+
+    ad_sig_df = compute_channel_significance(ad_sig_data)
+
+    ad_gen = os.path.join(file_path, "boostrap_summary.json")
+    if os.path.isfile(ad_gen):
+        with open(ad_gen) as f:
+            ad_gen_data = json.load(f)
+
+    def compute_channel_generation(model_stats):
+        records = []
+        for ibootstrap, summary in model_stats.items():
+            for label, val in summary.items():
+                if "after cut" not in val:
+                    continue
+
+                metrics = val["after cut"]
+                group = "OS" if label.endswith("OS") else "SS"
+
+                records.append({
+                    "raw_model": label,
+                    "model": AD_MODEL_MAPPING.get(re.sub(r"(-(calibrated|OS|SS))+$", "", label), label),
+                    "calibrated": True if "-calibrated" in label.lower() else False,
+                    "train_type": group,
+                    "test_type": None,
+
+                    "bootstrap": ibootstrap,
+                    "cov": metrics.get("cov", np.nan),
+                    "mmd": metrics.get("mmd", np.nan),
+                    "efficiency": metrics.get("efficiency", np.nan),
+                    "mean_calibration_difference": metrics.get("mean_calibration_difference", np.nan),
+                    "mean_mass_difference": metrics.get("mean_mass_difference", np.nan),
+                })
+
+        df = pd.DataFrame(records)
+        return df
+
+    ad_gen_df = compute_channel_generation(ad_gen_data)
+
+    return {
+        'sig': ad_sig_df,
+        'gen': ad_gen_df
+    }
+
+
+def plot_ad_results(data):
+    AD_MODEL = ["Nominal", "Scratch"]
+
+    plot_ad_sig_summary(
+        data['sig'],
+        models_order=AD_MODEL,
+        channels_order = ["train-OS-test-OS", "train-SS-test-OS", "train-OS-test-SS", "train-SS-test-SS"],
+        show_error=True, var="median", f_name="ad_significance.pdf", plot_dir="plot/AD",
+        y_ref=6.4
+    )
+
+    plot_ad_gen_summary(
+        data['gen'],
+        models_order=AD_MODEL,
+        label_right="calibration magnitude [%]",
+        f_name="ad_generation.pdf",
+        plot_dir="plot/AD",
+        y_min_left=0.6,
+        y_min_right=0,
+    )
+
+    pass
+
+
 if __name__ == '__main__':
     qe_data = read_qe_data('data/QE_results_table.csv')
     plot_qe_results(qe_data)
 
     bsm_data = read_bsm_data('data/BSM')
     plot_bsm_results(bsm_data)
+
+    ad_data = read_ad_data("data/AD")
+    plot_ad_results(ad_data)
+
+    pass

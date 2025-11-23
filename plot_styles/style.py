@@ -1,10 +1,28 @@
+# MODEL_COLORS = {
+#     "SSL": "#7399f4",
+#     "Nominal": "#925eb0",
+#     "Scratch": "#7ab656",
+#     "Ablation": "#cc7c71",
+#     "Ref.": "#a5aeb7",
+#     "SPANet": "#a5aeb7",
+# }
+
+# MODEL_COLORS = {
+#     "SSL":     "#4C72B0",   # muted blue
+#     "Nominal": "#DD8452",   # muted orange
+#     "Scratch": "#55A868",   # soft green
+#     "Ablation": "#C44E52",  # muted red
+#     "Ref.":    "#817F85",   # neutral grey
+#     "SPANet":  "#817F85",   # same as Ref.
+# }
+
 MODEL_COLORS = {
-    "SSL": "#7399f4",
-    "Nominal": "#925eb0",
-    "Scratch": "#7ab656",
-    "Ablation": "#cc7c71",
-    "Ref.": "#a5aeb7",
-    "SPANet": "#a5aeb7",
+    "SSL":      "#5B84B1",   # muted steel blue
+    "Nominal":  "#7CA2C3",   # softer blue-grey, same hue family
+    "Scratch":  "#D7A46F",   # soft clay orange (muted)
+    "Ablation": "#C28E6A",   # slightly darker orange, same hue family
+    "Ref.":     "#9A9A9A",   # neutral grey
+    "SPANet":   "#9A9A9A",   # same grey for grouping
 }
 
 MODEL_PRETTY = {

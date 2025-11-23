@@ -112,7 +112,8 @@ def plot_loss(
     if with_legend: plot_legend(
         fig, active_models, train_sizes, dataset_markers, dataset_pretty, MODEL_COLORS,
         None if 'head' not in loss_df.columns or multi_panel_config is None else multi_panel_config['configs'],
-        HEAD_LINESTYLES
+        HEAD_LINESTYLES,
+        legends=["dataset", "heads", "models"]
     )
 
     plt.tight_layout(rect=(0.0, 0.0, 1.0, 0.95))

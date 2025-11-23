@@ -194,7 +194,8 @@ def sic_plot(
 
     if with_legend: plot_legend(
         fig, active_models, train_sizes, dataset_markers, dataset_pretty, MODEL_COLORS,
-        head_order, HEAD_LINESTYLES
+        head_order, HEAD_LINESTYLES,
+        legends=["dataset", "heads", "models"]
     )
 
     plt.tight_layout(rect=(0, 0, 1, 0.93))
