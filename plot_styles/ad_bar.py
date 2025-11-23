@@ -139,7 +139,7 @@ def plot_ad_sig_summary(
         ax.text(
             x_ref * 1.05,
             y_ref * 0.98,
-            f"Paper Benchmark: {y_ref:.1f}$\\sigma$",
+            f"Reference Significance: {y_ref:.1f}$\\sigma$",
             fontsize=12,
             color="gray",
             transform=trans,
