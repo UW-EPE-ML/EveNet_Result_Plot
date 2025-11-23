@@ -32,6 +32,7 @@ def plot_ad_sig_summary(
         y_min=None,
         f_name=None,
         plot_dir="./",
+        with_legend: bool = True,
 ):
     # Which models appear?
     detected = sorted(df["model"].unique())
@@ -148,7 +149,7 @@ def plot_ad_sig_summary(
     # -------------------------------------------------------
     # Legend
     # -------------------------------------------------------
-    plot_legend(
+    if with_legend: plot_legend(
         fig,
         active_models=model_list,
         model_colors=MODEL_COLORS,
@@ -176,6 +177,7 @@ def plot_ad_gen_summary(
         y_min_right=None,
         f_name=None,
         plot_dir="./",
+        with_legend: bool = True,
 ):
     """
     Two-panel Nature-style bar plot for after-cut metrics.
@@ -303,7 +305,7 @@ def plot_ad_gen_summary(
     # -------------------------------------------------------
     # Legend
     # -------------------------------------------------------
-    plot_legend(
+    if with_legend: plot_legend(
         fig,
         active_models=model_list,
         model_colors=MODEL_COLORS,

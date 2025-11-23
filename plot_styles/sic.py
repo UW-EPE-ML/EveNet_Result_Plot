@@ -73,7 +73,7 @@ def sic_plot(
             # -------------------------------------------------------
             # SIC Curve Plot (Only for full train_size)
             # -------------------------------------------------------
-            if row["train_size"] == max(train_sizes):
+            if row["train_size"] == max(train_sizes) and row['head'] in head_order:
                 ax_curve.plot(
                     TPR,
                     SIC_smooth,
