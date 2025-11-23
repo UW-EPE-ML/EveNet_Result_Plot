@@ -1,0 +1,314 @@
+{
+  "evenet-ma30-pretrain-ablation1-0.01-False-False": {
+    "effective_steps": 35.400390625,
+    "val": 0.6263027787208557
+  },
+  "evenet-ma30-pretrain-ablation1-0.03-False-False": {
+    "effective_steps": 47.607421875,
+    "val": 0.5769120454788208
+  },
+  "evenet-ma30-pretrain-ablation1-0.1-False-False": {
+    "effective_steps": 122.0703125,
+    "val": 0.519282341003418
+  },
+  "evenet-ma30-pretrain-ablation1-0.3-False-False": {
+    "effective_steps": 1062.01171875,
+    "val": 0.43280652165412903
+  },
+  "evenet-ma30-pretrain-ablation1-1.0-False-False": {
+    "effective_steps": 1098.6328125,
+    "val": 0.44372648000717163
+  },
+  "evenet-ma30-pretrain-ablation4-0.01-False-False": {
+    "effective_steps": 23.193359375,
+    "val": 0.5340234637260437
+  },
+  "evenet-ma30-pretrain-ablation4-0.03-False-False": {
+    "effective_steps": 40.283203125,
+    "val": 0.47813063859939575
+  },
+  "evenet-ma30-pretrain-ablation4-0.1-False-False": {
+    "effective_steps": 97.65625,
+    "val": 0.4502437114715576
+  },
+  "evenet-ma30-pretrain-ablation4-0.3-False-False": {
+    "effective_steps": 659.1796875,
+    "val": 0.4071483612060547
+  },
+  "evenet-ma30-pretrain-ablation4-1.0-False-False": {
+    "effective_steps": 732.421875,
+    "val": 0.4085308611392975
+  },
+  "evenet-ma30-pretrainv1-0.01-False-False": {
+    "effective_steps": 25.634765625,
+    "val": 0.5377103090286255
+  },
+  "evenet-ma30-pretrainv1-0.03-False-False": {
+    "effective_steps": 43.9453125,
+    "val": 0.4983222186565399
+  },
+  "evenet-ma30-pretrainv1-0.1-False-False": {
+    "effective_steps": 109.86328125,
+    "val": 0.458948016166687
+  },
+  "evenet-ma30-pretrainv1-0.3-False-False": {
+    "effective_steps": 1098.6328125,
+    "val": 0.4076153337955475
+  },
+  "evenet-ma30-pretrainv1-1.0-False-False": {
+    "effective_steps": 854.4921875,
+    "val": 0.39818066358566284
+  },
+  "evenet-ma30-scratch-0.01-False-False": {
+    "effective_steps": 28.076171875,
+    "val": 0.6222162842750549
+  },
+  "evenet-ma30-scratch-0.03-False-False": {
+    "effective_steps": 51.26953125,
+    "val": 0.587771475315094
+  },
+  "evenet-ma30-scratch-0.1-False-False": {
+    "effective_steps": 170.8984375,
+    "val": 0.5760951638221741
+  },
+  "evenet-ma30-scratch-0.3-False-False": {
+    "effective_steps": 842.28515625,
+    "val": 0.5332885980606079
+  },
+  "evenet-ma30-scratch-1.0-False-False": {
+    "effective_steps": 3173.828125,
+    "val": 0.4830953776836395
+  },
+  "evenet-ma30-pretrain-ablation1-0.01-False-True": {
+    "effective_steps": 73.2421875,
+    "val": 2.1749966740608215
+  },
+  "evenet-ma30-pretrain-ablation1-0.03-False-True": {
+    "effective_steps": 91.552734375,
+    "val": 1.8579322695732117
+  },
+  "evenet-ma30-pretrain-ablation1-0.1-False-True": {
+    "effective_steps": 231.93359375,
+    "val": 1.6529176235198975
+  },
+  "evenet-ma30-pretrain-ablation1-0.3-False-True": {
+    "effective_steps": 1757.8125,
+    "val": 1.2634795904159546
+  },
+  "evenet-ma30-pretrain-ablation1-1.0-False-True": {
+    "effective_steps": 2685.546875,
+    "val": 1.2596060931682587
+  },
+  "evenet-ma30-pretrain-ablation4-0.01-False-True": {
+    "effective_steps": 67.138671875,
+    "val": 2.061750113964081
+  },
+  "evenet-ma30-pretrain-ablation4-0.03-False-True": {
+    "effective_steps": 102.5390625,
+    "val": 1.7467916011810303
+  },
+  "evenet-ma30-pretrain-ablation4-0.1-False-True": {
+    "effective_steps": 195.3125,
+    "val": 1.4835082292556763
+  },
+  "evenet-ma30-pretrain-ablation4-0.3-False-True": {
+    "effective_steps": 1757.8125,
+    "val": 1.2182899713516235
+  },
+  "evenet-ma30-pretrain-ablation4-1.0-False-True": {
+    "effective_steps": 1464.84375,
+    "val": 1.2076702117919922
+  },
+  "evenet-ma30-pretrainv1-0.01-False-True": {
+    "effective_steps": 62.255859375,
+    "val": 1.8787782788276672
+  },
+  "evenet-ma30-pretrainv1-0.03-False-True": {
+    "effective_steps": 117.1875,
+    "val": 1.5043202638626099
+  },
+  "evenet-ma30-pretrainv1-0.1-False-True": {
+    "effective_steps": 231.93359375,
+    "val": 1.3877670466899872
+  },
+  "evenet-ma30-pretrainv1-0.3-False-True": {
+    "effective_steps": 1757.8125,
+    "val": 1.199767678976059
+  },
+  "evenet-ma30-pretrainv1-1.0-False-True": {
+    "effective_steps": 2685.546875,
+    "val": 1.2229206264019012
+  },
+  "evenet-ma30-scratch-0.01-False-True": {
+    "effective_steps": 0.0,
+    "val": 4.444974184036255
+  },
+  "evenet-ma30-scratch-0.03-False-True": {
+    "effective_steps": 197.75390625,
+    "val": 1.9822338223457336
+  },
+  "evenet-ma30-scratch-0.1-False-True": {
+    "effective_steps": 366.2109375,
+    "val": 1.681645154953003
+  },
+  "evenet-ma30-scratch-0.3-False-True": {
+    "effective_steps": 1684.5703125,
+    "val": 1.4124467372894287
+  },
+  "evenet-ma30-scratch-1.0-False-True": {
+    "effective_steps": 3173.828125,
+    "val": 1.345972716808319
+  },
+  "evenet-ma30-pretrain-ablation1-0.01-True-False": {
+    "effective_steps": 37.841796875,
+    "val": 0.6135682463645935
+  },
+  "evenet-ma30-pretrain-ablation1-0.03-True-False": {
+    "effective_steps": 117.1875,
+    "val": 0.5533523559570312
+  },
+  "evenet-ma30-pretrain-ablation1-0.1-True-False": {
+    "effective_steps": 231.93359375,
+    "val": 0.5260030627250671
+  },
+  "evenet-ma30-pretrain-ablation1-0.3-True-False": {
+    "effective_steps": 1721.19140625,
+    "val": 0.44778457283973694
+  },
+  "evenet-ma30-pretrain-ablation1-1.0-True-False": {
+    "effective_steps": 3051.7578125,
+    "val": 0.4339439272880554
+  },
+  "evenet-ma30-pretrain-ablation4-0.01-True-False": {
+    "effective_steps": 29.296875,
+    "val": 0.5277639031410217
+  },
+  "evenet-ma30-pretrain-ablation4-0.03-True-False": {
+    "effective_steps": 54.931640625,
+    "val": 0.48322370648384094
+  },
+  "evenet-ma30-pretrain-ablation4-0.1-True-False": {
+    "effective_steps": 207.51953125,
+    "val": 0.45983436703681946
+  },
+  "evenet-ma30-pretrain-ablation4-0.3-True-False": {
+    "effective_steps": 1647.94921875,
+    "val": 0.41335606575012207
+  },
+  "evenet-ma30-pretrain-ablation4-1.0-True-False": {
+    "effective_steps": 1342.7734375,
+    "val": 0.41210073232650757
+  },
+  "evenet-ma30-pretrainv1-0.01-True-False": {
+    "effective_steps": 41.50390625,
+    "val": 0.5288000702857971
+  },
+  "evenet-ma30-pretrainv1-0.03-True-False": {
+    "effective_steps": 65.91796875,
+    "val": 0.4817478060722351
+  },
+  "evenet-ma30-pretrainv1-0.1-True-False": {
+    "effective_steps": 256.34765625,
+    "val": 0.4579192101955414
+  },
+  "evenet-ma30-pretrainv1-0.3-True-False": {
+    "effective_steps": 1574.70703125,
+    "val": 0.41280028223991394
+  },
+  "evenet-ma30-pretrainv1-1.0-True-False": {
+    "effective_steps": 1953.125,
+    "val": 0.4078551232814789
+  },
+  "evenet-ma30-scratch-0.01-True-False": {
+    "effective_steps": 17.08984375,
+    "val": 0.6609169840812683
+  },
+  "evenet-ma30-scratch-0.03-True-False": {
+    "effective_steps": 201.416015625,
+    "val": 0.5728611350059509
+  },
+  "evenet-ma30-scratch-0.1-True-False": {
+    "effective_steps": 598.14453125,
+    "val": 0.541053295135498
+  },
+  "evenet-ma30-scratch-0.3-True-False": {
+    "effective_steps": 1794.43359375,
+    "val": 0.48092588782310486
+  },
+  "evenet-ma30-scratch-1.0-True-False": {
+    "effective_steps": 3051.7578125,
+    "val": 0.47067126631736755
+  },
+  "evenet-ma30-pretrain-ablation1-0.01-True-True": {
+    "effective_steps": 70.80078125,
+    "val": 2.084932506084442
+  },
+  "evenet-ma30-pretrain-ablation1-0.03-True-True": {
+    "effective_steps": 131.8359375,
+    "val": 1.8529285788536072
+  },
+  "evenet-ma30-pretrain-ablation1-0.1-True-True": {
+    "effective_steps": 231.93359375,
+    "val": 1.7015056014060974
+  },
+  "evenet-ma30-pretrain-ablation1-0.3-True-True": {
+    "effective_steps": 1757.8125,
+    "val": 1.28871551156044
+  },
+  "evenet-ma30-pretrain-ablation1-1.0-True-True": {
+    "effective_steps": 3051.7578125,
+    "val": 1.2737131714820862
+  },
+  "evenet-ma30-pretrain-ablation4-0.03-True-True": {
+    "effective_steps": 95.21484375,
+    "val": 1.7747870087623596
+  },
+  "evenet-ma30-pretrain-ablation4-0.1-True-True": {
+    "effective_steps": 207.51953125,
+    "val": 1.4622104167938232
+  },
+  "evenet-ma30-pretrain-ablation4-0.3-True-True": {
+    "effective_steps": 1684.5703125,
+    "val": 1.222248524427414
+  },
+  "evenet-ma30-pretrain-ablation4-1.0-True-True": {
+    "effective_steps": 1953.125,
+    "val": 1.241137146949768
+  },
+  "evenet-ma30-pretrainv1-0.01-True-True": {
+    "effective_steps": 51.26953125,
+    "val": 1.9027718901634216
+  },
+  "evenet-ma30-pretrainv1-0.1-True-True": {
+    "effective_steps": 451.66015625,
+    "val": 1.3544016182422638
+  },
+  "evenet-ma30-pretrainv1-0.3-True-True": {
+    "effective_steps": 1611.328125,
+    "val": 1.2329719364643097
+  },
+  "evenet-ma30-pretrainv1-1.0-True-True": {
+    "effective_steps": 2319.3359375,
+    "val": 1.217213362455368
+  },
+  "evenet-ma30-scratch-0.01-True-True": {
+    "effective_steps": 0.0,
+    "val": 4.050195753574371
+  },
+  "evenet-ma30-scratch-0.03-True-True": {
+    "effective_steps": 194.091796875,
+    "val": 1.8915361166000366
+  },
+  "evenet-ma30-scratch-0.1-True-True": {
+    "effective_steps": 341.796875,
+    "val": 1.7321486473083496
+  },
+  "evenet-ma30-scratch-0.3-True-True": {
+    "effective_steps": 1757.8125,
+    "val": 1.4123062491416931
+  },
+  "evenet-ma30-scratch-1.0-True-True": {
+    "effective_steps": 3173.828125,
+    "val": 1.3782771527767181
+  }
+}
