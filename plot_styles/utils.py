@@ -158,3 +158,27 @@ def plot_legend(
         labels = [r"$\bf{Model\ Types}$"] + active_models
 
         add_legend(handles, labels, ncol=len(model_handles) + 1, fontsize=15)
+
+
+import os
+
+
+def save_axis(ax, plot_dir, f_name):
+    # Temporarily hide all other axes
+    fig = ax.figure
+    original_vis = [a.get_visible() for a in fig.axes]
+    for a in fig.axes:
+        a.set_visible(False)
+
+    ax.set_visible(True)
+
+    plt.tight_layout(rect=(0.0, 0.0, 1.0, 0.95))
+    # ---- SAVE HERE ----
+    os.makedirs(plot_dir, exist_ok=True)
+    plot_des = os.path.join(plot_dir, f_name)
+    fig.savefig(plot_des, bbox_inches="tight")
+    print(f"Saved figure → {plot_des}")
+
+    # Restore visibility
+    for a, vis in zip(fig.axes, original_vis):
+        a.set_visible(vis)

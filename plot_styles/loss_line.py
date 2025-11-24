@@ -2,7 +2,7 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 
-from plot_styles.utils import apply_nature_axis_style, plot_legend
+from plot_styles.utils import apply_nature_axis_style, plot_legend, save_axis
 from plot_styles.style import MODEL_COLORS, HEAD_LINESTYLES
 
 
@@ -21,6 +21,7 @@ def plot_loss(
         multi_panel_config=None,
         grid=False,
         with_legend: bool = True,
+        save_individual_axes: bool = False,
 ):
     axes = []
     if multi_panel_config is None:
@@ -93,7 +94,7 @@ def plot_loss(
             ax.set_ylim(bottom=y_min)
         if multi_panel_config is not None:
             mp_cfg = multi_panel_config['configs'][panel_idx]
-            ax.set_title(mp_cfg, fontsize=18, weight="bold")
+            # ax.set_title(mp_cfg, fontsize=18, weight="bold")
 
         apply_nature_axis_style(ax)
         ax.tick_params(axis='both', which='major', labelsize=14)
@@ -105,6 +106,13 @@ def plot_loss(
         # -------------------------------------------------------
         if x_indicator:
             ax.axvline(x=x_indicator, color="gray", linestyle="--", linewidth=1.5, alpha=0.7)
+
+        if save_individual_axes:
+            save_axis(
+                ax,
+                plot_dir,
+                f_name=f"loss_line_panel_{panel_idx + 1}.pdf"
+            )
 
     active_models = list(set(active_models))
     active_models = [m for m in model_order if m in active_models]

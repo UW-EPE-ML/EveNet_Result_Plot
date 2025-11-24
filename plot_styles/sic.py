@@ -1,11 +1,12 @@
 from scipy.signal import savgol_filter
 from collections import defaultdict
 from matplotlib.gridspec import GridSpec
-from plot_styles.utils import apply_nature_axis_style, plot_legend
+from plot_styles.utils import apply_nature_axis_style, plot_legend, save_axis
 import matplotlib.pyplot as plt
 import numpy as np
 from plot_styles.style import MODEL_COLORS, MODEL_PRETTY, HEAD_LINESTYLES
 import os
+from matplotlib.transforms import blended_transform_factory
 
 
 def smooth_curve(y, window=31, poly=3):
@@ -34,11 +35,13 @@ def sic_plot(
         dataset_markers,
         dataset_pretty,
         head_order,
-        y_min=0,
+        y_min=None,
+        x_indicator=None,
         fig_size=(20, 6),
         plot_dir=None,
         f_name=None,
         with_legend: bool = True,
+        save_individual_axes: bool = False,
 ):
     # ============================================================
     # FIGURE with 1:1:1
@@ -188,6 +191,47 @@ def sic_plot(
     # ax_scatter.set_yscale("log")
     ax_scatter.set_ylabel("Max SIC")
     apply_nature_axis_style(ax_scatter)
+
+    if y_min is not None:
+        if isinstance(y_min, list) or len(y_min) == 3:
+            ax_curve.set_ylim(bottom=y_min[0])
+            ax_bar.set_ylim(bottom=y_min[1])
+            ax_scatter.set_ylim(bottom=y_min[2])
+        else:
+            ax_curve.set_ylim(bottom=y_min)
+            ax_bar.set_ylim(bottom=y_min)
+            ax_scatter.set_ylim(bottom=y_min)
+
+    if x_indicator:
+        ax_scatter.axvline(x=x_indicator, color="gray", linestyle="--", linewidth=1.5, alpha=0.7)
+        trans = blended_transform_factory(ax_scatter.transData, ax_scatter.transAxes)
+        # annotation
+        ax_scatter.text(
+            x_indicator * 0.95,
+            0.025,
+            f"Typical HEP dataset: {x_indicator:.0f}k events",
+            fontsize=12,
+            color="gray",
+            transform=trans,
+            ha="right",
+        )
+
+    if save_individual_axes:
+        save_axis(
+            ax_curve,
+            plot_dir,
+            f_name=f"sic_curve.pdf"
+        )
+        save_axis(
+            ax_bar,
+            plot_dir,
+            f_name=f"sic_bar.pdf"
+        )
+        save_axis(
+            ax_scatter,
+            plot_dir,
+            f_name=f"sic_scatter.pdf"
+        )
 
     active_models = list(set(active_models))
     active_models = [m for m in model_order if m in active_models]

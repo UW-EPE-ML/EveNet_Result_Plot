@@ -10,6 +10,7 @@ from plot_styles.bar_line_two_panel import plot_bar_line
 from plot_styles.sic import sic_plot
 from plot_styles.ad_bar import plot_ad_sig_summary, plot_ad_gen_summary
 
+
 def convert_epochs_to_steps(epoch, train_size, batch_size_per_GPU=1024, GPUs=16):
     effective_step = (epoch * train_size * 1000 / (batch_size_per_GPU * GPUs))
     return effective_step
@@ -44,9 +45,10 @@ def plot_qe_results(data):
         model_order=["Nominal", "Scratch"],
         dataset_markers=QE_DATASET_MARKERS,
         dataset_pretty=QE_DATASET_PRETTY,
-        y_min=0.82, fig_size=(9, 8), plot_dir="plot/QE", f_name="loss.pdf",
+        y_min=0.82, fig_size=(7, 6), plot_dir="plot/QE", f_name="loss.pdf",
         grid=True,
         with_legend=True,
+        save_individual_axes=True,
     )
 
     plot_bar_line(
@@ -59,13 +61,10 @@ def plot_qe_results(data):
         y_label="Pairing Efficiency [%]",
         y_min=42,
         panel_ratio=(2, 2),  # << tunable left:right panel ratio
-        bar_margin=10.0,  # << bars closer to boundary
-        bar_width=5.0,  # << slimmer bars
-        bar_spacing=5.5,
-        x_range=[2.5, 1.5],  # << small gap between bars,
         x_indicator=2.5e2,  # << typical dataset size indicator
         plot_dir="plot/QE",
-        f_name="pair.pdf"
+        f_name="pair.pdf",
+        save_individual_axes=True,
     )
 
     plot_bar_line(
@@ -78,14 +77,11 @@ def plot_qe_results(data):
         y_label=r"precision on D [%]",
         y_min=.5,
         panel_ratio=(2, 2),  # << tunable left:right panel ratio
-        bar_margin=10.0,  # << bars closer to boundary
-        bar_width=5.0,  # << slimmer bars
-        bar_spacing=5.5,
-        x_range=[2.5, 2.5],  # << small gap between bars
         x_indicator=2.5e2,  # << typical dataset size indicator
         logy=False,
         plot_dir="plot/QE",
-        f_name="deltaD.pdf"
+        f_name="deltaD.pdf",
+        save_individual_axes=True,
     )
 
 
@@ -249,6 +245,7 @@ def plot_bsm_results(data):
 
     # BSM_TRAIN_SIZE = [10, 30, 100, 300, 1000]  # in thousands
     BSM_TRAIN_SIZE = [30, 100, 300, 1000]  # in thousands
+    BSM_TYPICAL_DATASET_SIZE = 250  # in thousands
 
     BSM_MODEL = ["Nominal", "Scratch", "SPANet"]
     BSM_HEAD = ["Cls", "Cls+Assign"]
@@ -259,7 +256,7 @@ def plot_bsm_results(data):
         model_order=BSM_MODEL,
         dataset_markers=BSM_DATASET_MARKERS,
         dataset_pretty=BSM_DATASET_PRETTY,
-        fig_size=(13, 7), plot_dir="plot/BSM", f_name="loss.pdf",
+        fig_size=(12, 6), plot_dir="plot/BSM", f_name="loss.pdf",
         multi_panel_config={
             "n_rows": 1,
             "n_cols": 2,
@@ -270,6 +267,7 @@ def plot_bsm_results(data):
         },
         grid=True,
         with_legend=True,
+        save_individual_axes=True,
     )
 
     plot_bar_line(
@@ -284,13 +282,10 @@ def plot_bsm_results(data):
         y_min=(65, 50),
         logx=True,
         panel_ratio=(2, 2),  # << tunable left:right panel ratio
-        bar_margin=10.0,  # << bars closer to boundary
-        bar_width=5.0,  # << slimmer bars
-        bar_spacing=5.5,
-        x_range=[2.5, 1.5],  # << small gap between bars,
-        x_indicator=2.5e2,  # << typical dataset size indicator
+        x_indicator=BSM_TYPICAL_DATASET_SIZE,  # << typical dataset size indicator
         plot_dir="plot/BSM",
-        f_name="pair.pdf"
+        f_name="pair.pdf",
+        save_individual_axes=True,
     )
 
     sic_plot(
@@ -300,10 +295,13 @@ def plot_bsm_results(data):
         head_order=BSM_HEAD,
         dataset_markers=BSM_DATASET_MARKERS,
         dataset_pretty=BSM_DATASET_PRETTY,
+        x_indicator=BSM_TYPICAL_DATASET_SIZE,
+        y_min=[0, 0, 0.85],
         fig_size=(21, 6),
         plot_dir="plot/BSM",
         f_name="sic.pdf",
         with_legend=True,
+        save_individual_axes=True,
     )
 
 
@@ -401,7 +399,7 @@ def plot_ad_results(data):
     plot_ad_sig_summary(
         data['sig'],
         models_order=AD_MODEL,
-        channels_order = ["train-OS-test-OS", "train-SS-test-OS", "train-OS-test-SS", "train-SS-test-SS"],
+        channels_order=["train-OS-test-OS", "train-SS-test-OS", "train-OS-test-SS", "train-SS-test-SS"],
         show_error=True, var="median", f_name="ad_significance.pdf", plot_dir="plot/AD",
         y_ref=6.4
     )
@@ -414,6 +412,7 @@ def plot_ad_results(data):
         plot_dir="plot/AD",
         y_min_left=0.6,
         y_min_right=0,
+        save_individual_axes=True,
     )
 
     pass

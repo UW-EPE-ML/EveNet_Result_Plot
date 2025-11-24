@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from plot_styles.utils import apply_nature_axis_style, plot_legend
+from plot_styles.utils import apply_nature_axis_style, plot_legend, save_axis
 from plot_styles.style import MODEL_COLORS, MODEL_PRETTY, HEAD_LINESTYLES
 
 from matplotlib.gridspec import GridSpec
@@ -22,16 +22,13 @@ def plot_bar_line(
         y_min=None,
         fig_size=(14, 6),
         panel_ratio=(3, 2),  # << tunable left:right panel ratio
-        bar_width=0.025,  # << slimmer bars
-        bar_spacing=0.035,  # << small gap between bars
-        bar_margin=0.015,
-        x_range=(6, 6),  # << bars closer to boundary
         x_indicator=None,
         logy=False,
         logx=False,
         plot_dir=None,
         f_name=None,
         with_legend: bool = True,
+        save_individual_axes: bool = False,
 ):
     if head_order is None:
         head_order = [None]
@@ -136,6 +133,7 @@ def plot_bar_line(
         ax_left.set_xticks(indices)
         ax_left.set_xticklabels(head_order)
     ax_left.set_ylabel(y_label, fontsize=16)
+    ax_right.set_ylabel(y_label, fontsize=16)
     if y_min is not None:
         if isinstance(y_min, tuple) or isinstance(y_min, list):
             ax_right.set_ylim(bottom=y_min[1])
@@ -150,6 +148,32 @@ def plot_bar_line(
     ax_left.tick_params(axis='both', which='major', labelsize=14)
     ax_right.tick_params(axis='both', which='major', labelsize=14)
 
+    if x_indicator:
+        ax_right.axvline(x=x_indicator, color="gray", linestyle="--", linewidth=1.5, alpha=0.7)
+        trans = blended_transform_factory(ax_right.transData, ax_right.transAxes)
+        # annotation
+        ax_right.text(
+            x_indicator * 0.95,
+            0.025,
+            f"Typical HEP dataset: {x_indicator:.0f}k events",
+            fontsize=12,
+            color="gray",
+            transform=trans,
+            ha="right",
+        )
+
+    if save_individual_axes:
+        save_axis(
+            ax_left,
+            plot_dir,
+            f_name=f"{f_name.replace('.pdf','')}_bar_panel.pdf"
+        )
+        save_axis(
+            ax_right,
+            plot_dir,
+            f_name=f"{f_name.replace('.pdf','')}_line_panel.pdf"
+        )
+
     active_models = list(set(active_models))
     active_models = [m for m in model_order if m in active_models]
 
@@ -158,18 +182,6 @@ def plot_bar_line(
         None if head_order == [None] else head_order, HEAD_LINESTYLES,
         legends=["dataset", "heads", "models"]
     )
-    if x_indicator:
-        ax_right.axvline(x=x_indicator, color="gray", linestyle="--", linewidth=1.5, alpha=0.7)
-        trans = blended_transform_factory(ax_right.transData, ax_right.transAxes)
-        # annotation
-        ax_right.text(
-            x_indicator * 1.025,
-            0.025,
-            f"Typical dataset size: {x_indicator:.0f}K",
-            fontsize=12,
-            color="gray",
-            transform=trans,
-        )
 
     plt.tight_layout(rect=(0, 0, 1, 0.93))
     if f_name is not None:

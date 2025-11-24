@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import os
 from plot_styles.style import MODEL_COLORS, MODEL_PRETTY
-from plot_styles.utils import apply_nature_axis_style, plot_legend
+from plot_styles.utils import apply_nature_axis_style, plot_legend, save_axis
 from matplotlib.transforms import blended_transform_factory
 
 sns.set_theme(style="white", font_scale=1.2)
@@ -178,6 +178,7 @@ def plot_ad_gen_summary(
         f_name=None,
         plot_dir="./",
         with_legend: bool = True,
+        save_individual_axes: bool = False,
 ):
     """
     Two-panel Nature-style bar plot for after-cut metrics.
@@ -301,6 +302,18 @@ def plot_ad_gen_summary(
 
     # Right panel
     plot_panel(axes[1], right_data, label_right, y_min=y_min_right, percentage=True)
+
+    if save_individual_axes:
+        save_axis(
+            axes[0],
+            plot_dir,
+            f_name=f"ad_gen_{metric_left}.pdf"
+        )
+        save_axis(
+            axes[1],
+            plot_dir,
+            f_name=f"ad_gen_{metric_right}.pdf"
+        )
 
     # -------------------------------------------------------
     # Legend
