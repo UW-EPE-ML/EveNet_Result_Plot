@@ -47,7 +47,7 @@ def apply_nature_axis_style(ax):
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 from matplotlib.patches import Rectangle
-
+from plot_styles.style import MODEL_PRETTY
 
 def plot_legend(
         fig,
@@ -155,7 +155,7 @@ def plot_legend(
         ]
 
         handles = [Line2D([], [], linestyle="none", label=r"$\bf{Model\ Types}$")] + model_handles
-        labels = [r"$\bf{Model\ Types}$"] + active_models
+        labels = [r"$\bf{Model\ Types}$"] + [MODEL_PRETTY[m] for m in active_models]
 
         add_legend(handles, labels, ncol=len(model_handles) + 1, fontsize=15)
 

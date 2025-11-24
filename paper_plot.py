@@ -104,8 +104,8 @@ def read_bsm_data(folder_path):
     HEAD_NAME_MAPPING = {
         (False, False): "Cls",
         (False, True): "Cls+Seg",
-        (True, False): "Cls+Assign",
-        (True, True): "Cls+Assign+Seg",
+        (True, False): "Cls+Asn",
+        (True, True): "Cls+Asn+Seg",
     }
 
     def get_name(folder_name):
@@ -248,7 +248,7 @@ def plot_bsm_results(data):
     BSM_TYPICAL_DATASET_SIZE = 250  # in thousands
 
     BSM_MODEL = ["Nominal", "Scratch", "SPANet"]
-    BSM_HEAD = ["Cls", "Cls+Assign"]
+    BSM_HEAD = ["Cls", "Cls+Asn"]
 
     plot_loss(
         data[data["mass_a"] == "30"],
@@ -261,7 +261,7 @@ def plot_bsm_results(data):
             "n_rows": 1,
             "n_cols": 2,
             "configs": [
-                "Cls", "Cls+Assign",
+                *BSM_HEAD
                 # "Cls+Seg", "Cls+Assign+Seg"
             ]
         },
@@ -277,7 +277,7 @@ def plot_bsm_results(data):
         train_sizes=BSM_TRAIN_SIZE,
         dataset_markers=BSM_DATASET_MARKERS,
         dataset_pretty=BSM_DATASET_PRETTY,
-        head_order=["Cls+Assign", "Cls+Assign+Seg"],
+        head_order=["Cls+Asn", "Cls+Asn+Seg"],
         y_label="Pairing Efficiency [%]",
         y_min=(65, 50),
         logx=True,

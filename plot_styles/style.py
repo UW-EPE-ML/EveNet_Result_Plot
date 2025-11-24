@@ -27,7 +27,7 @@ MODEL_COLORS = {
 
 MODEL_PRETTY = {
     "SSL": "SSL",
-    "Nominal": "Nominal",
+    "Nominal": "Full",
     "Ablation": "Ablation",
     "Scratch": "Scratch",
     "Ref.": "Ref",
@@ -67,6 +67,6 @@ BSM_DATASET_PRETTY = {
 HEAD_LINESTYLES = {
     "Cls": "-",
     "Cls+Seg": "-.",
-    "Cls+Assign": "--",
-    "Cls+Assign+Seg": ":",
+    "Cls+Asn": "--",
+    "Cls+Asn+Seg": ":",
 }
