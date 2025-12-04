@@ -17,10 +17,10 @@
 # }
 
 MODEL_COLORS = {
-    "SSL":      "#5B84B1",   # muted steel blue
-    "Nominal":  "#7CA2C3",   # softer blue-grey, same hue family
-    "Scratch":  "#D7A46F",   # soft clay orange (muted)
-    "Ablation": "#C28E6A",   # slightly darker orange, same hue family
+    "SSL":      "#6BAF8C",   # distinct muted teal-green (large separation)
+    "Nominal":  "#7CA2C3",   # fixed
+    "Ablation": "#3E5F78",   # darker blue-grey for strong contrast
+    "Scratch":  "#D7A46F",   # fixed
     "Ref.":     "#9A9A9A",   # neutral grey
     "SPANet":   "#9A9A9A",   # same grey for grouping
 }

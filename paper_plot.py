@@ -39,10 +39,12 @@ def plot_qe_results(data):
 
     QE_TRAIN_SIZE = [43, 130, 302, 432]  # in thousands
 
+    QE_MODEL_ORDER = ["Nominal", "Scratch", "Ref."]
+
     plot_loss(
         data,
         train_sizes=QE_TRAIN_SIZE,
-        model_order=["Nominal", "Scratch"],
+        model_order=QE_MODEL_ORDER,
         dataset_markers=QE_DATASET_MARKERS,
         dataset_pretty=QE_DATASET_PRETTY,
         y_min=0.82, fig_size=(7, 6), plot_dir="plot/QE", f_name="loss.pdf",
@@ -54,7 +56,7 @@ def plot_qe_results(data):
     plot_bar_line(
         data_df=data,
         metric="pairing",
-        model_order=["Nominal", "Scratch", "Ref."],
+        model_order=QE_MODEL_ORDER,
         train_sizes=QE_TRAIN_SIZE,
         dataset_markers=QE_DATASET_MARKERS,
         dataset_pretty=QE_DATASET_PRETTY,
@@ -70,7 +72,7 @@ def plot_qe_results(data):
     plot_bar_line(
         data_df=data,
         metric="deltaD",
-        model_order=["Nominal", "Scratch", "Ref."],
+        model_order=QE_MODEL_ORDER,
         train_sizes=QE_TRAIN_SIZE,
         dataset_markers=QE_DATASET_MARKERS,
         dataset_pretty=QE_DATASET_PRETTY,
@@ -243,12 +245,14 @@ def read_bsm_data(folder_path):
 def plot_bsm_results(data):
     from plot_styles.style import BSM_DATASET_MARKERS, BSM_DATASET_PRETTY
 
-    # BSM_TRAIN_SIZE = [10, 30, 100, 300, 1000]  # in thousands
-    BSM_TRAIN_SIZE = [30, 100, 300, 1000]  # in thousands
-    BSM_TYPICAL_DATASET_SIZE = 250  # in thousands
+    BSM_TRAIN_SIZE = [10, 30, 100, 300, 1000]  # in thousands
+    # BSM_TRAIN_SIZE = [30, 100, 300, 1000]  # in thousands
+    BSM_TYPICAL_DATASET_SIZE = 100  # in thousands
 
     BSM_MODEL = ["Nominal", "Scratch", "SPANet"]
+    # BSM_MODEL = ["Nominal", "Scratch", "SPANet", "SSL", "Ablation"]
     BSM_HEAD = ["Cls", "Cls+Asn"]
+    # BSM_HEAD = ["Cls", "Cls+Asn", "Cls+Seg", "Cls+Asn+Seg"]
 
     plot_loss(
         data[data["mass_a"] == "30"],
@@ -256,9 +260,10 @@ def plot_bsm_results(data):
         model_order=BSM_MODEL,
         dataset_markers=BSM_DATASET_MARKERS,
         dataset_pretty=BSM_DATASET_PRETTY,
-        fig_size=(12, 6), plot_dir="plot/BSM", f_name="loss.pdf",
+        plot_dir="plot/BSM", f_name="loss.pdf",
+        fig_size=(12, 10),
         multi_panel_config={
-            "n_rows": 1,
+            "n_rows": 2,
             "n_cols": 2,
             "configs": [
                 *BSM_HEAD
@@ -277,7 +282,8 @@ def plot_bsm_results(data):
         train_sizes=BSM_TRAIN_SIZE,
         dataset_markers=BSM_DATASET_MARKERS,
         dataset_pretty=BSM_DATASET_PRETTY,
-        head_order=["Cls+Asn", "Cls+Asn+Seg"],
+        # head_order=["Cls+Asn", "Cls+Asn+Seg"],
+        head_order=["Cls+Asn"],
         y_label="Pairing Efficiency [%]",
         y_min=(65, 50),
         logx=True,
@@ -395,6 +401,7 @@ def read_ad_data(file_path):
 
 def plot_ad_results(data):
     AD_MODEL = ["Nominal", "Scratch"]
+    # AD_MODEL = ["Nominal", "Scratch", "SSL", "Ablation"]
 
     plot_ad_sig_summary(
         data['sig'],
