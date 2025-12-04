@@ -37,9 +37,10 @@ def read_qe_data(file_path):
 def plot_qe_results(data):
     from plot_styles.style import QE_DATASET_MARKERS, QE_DATASET_PRETTY
 
-    QE_TRAIN_SIZE = [43, 130, 302, 432]  # in thousands
+    QE_TRAIN_SIZE = [15, 148, 1475, 2950]  # in thousands
+    # QE_TRAIN_SIZE = [15, 148, 1475]  # in thousands
 
-    QE_MODEL_ORDER = ["Nominal", "Scratch", "Ref."]
+    QE_MODEL_ORDER = ["Nominal", "Scratch", "SSL", "Ref."]
 
     plot_loss(
         data,
@@ -61,9 +62,11 @@ def plot_qe_results(data):
         dataset_markers=QE_DATASET_MARKERS,
         dataset_pretty=QE_DATASET_PRETTY,
         y_label="Pairing Efficiency [%]",
+        x_label="Train Size [K]",
         y_min=42,
+        logx=True,
         panel_ratio=(2, 2),  # << tunable left:right panel ratio
-        x_indicator=2.5e2,  # << typical dataset size indicator
+        x_indicator=1e3,  # << typical dataset size indicator
         plot_dir="plot/QE",
         f_name="pair.pdf",
         save_individual_axes=True,
@@ -77,10 +80,12 @@ def plot_qe_results(data):
         dataset_markers=QE_DATASET_MARKERS,
         dataset_pretty=QE_DATASET_PRETTY,
         y_label=r"precision on D [%]",
-        y_min=.5,
+        x_label="Train Size [K]",
+        y_min=1.,
         panel_ratio=(2, 2),  # << tunable left:right panel ratio
-        x_indicator=2.5e2,  # << typical dataset size indicator
+        x_indicator=1e3,  # << typical dataset size indicator
         logy=False,
+        logx=True,
         plot_dir="plot/QE",
         f_name="deltaD.pdf",
         save_individual_axes=True,
@@ -249,8 +254,9 @@ def plot_bsm_results(data):
     # BSM_TRAIN_SIZE = [30, 100, 300, 1000]  # in thousands
     BSM_TYPICAL_DATASET_SIZE = 100  # in thousands
 
-    BSM_MODEL = ["Nominal", "Scratch", "SPANet"]
+    BSM_MODEL = ["Nominal", "Ablation", "SSL", "Scratch", "SPANet"]
     # BSM_MODEL = ["Nominal", "Scratch", "SPANet", "SSL", "Ablation"]
+    # BSM_MODEL = ["Nominal", "Ablation"]
     BSM_HEAD = ["Cls", "Cls+Asn"]
     # BSM_HEAD = ["Cls", "Cls+Asn", "Cls+Seg", "Cls+Asn+Seg"]
 
@@ -264,7 +270,7 @@ def plot_bsm_results(data):
         fig_size=(12, 10),
         multi_panel_config={
             "n_rows": 2,
-            "n_cols": 2,
+            "n_cols": 1,
             "configs": [
                 *BSM_HEAD
                 # "Cls+Seg", "Cls+Assign+Seg"
@@ -429,10 +435,10 @@ if __name__ == '__main__':
     qe_data = read_qe_data('data/QE_results_table.csv')
     plot_qe_results(qe_data)
 
-    bsm_data = read_bsm_data('data/BSM')
-    plot_bsm_results(bsm_data)
+    # bsm_data = read_bsm_data('data/BSM')
+    # plot_bsm_results(bsm_data)
 
-    ad_data = read_ad_data("data/AD")
-    plot_ad_results(ad_data)
+    # ad_data = read_ad_data("data/AD")
+    # plot_ad_results(ad_data)
 
     pass

@@ -19,6 +19,7 @@ def plot_bar_line(
         dataset_pretty,
         head_order=None,
         y_label="Metric",
+        x_label="Train Size [K]",
         y_min=None,
         fig_size=(14, 6),
         panel_ratio=(3, 2),  # << tunable left:right panel ratio
@@ -125,7 +126,7 @@ def plot_bar_line(
         ax_left.set_yscale("log")
     if logx:
         ax_right.set_xscale("log")
-    ax_right.set_xlabel("Train Size [K]", fontsize=16)
+    ax_right.set_xlabel(x_label, fontsize=16)
     if head_order == [None]:
         ax_left.set_xticks([])
         ax_left.set_xlabel("Full dataset size", fontsize=16)
