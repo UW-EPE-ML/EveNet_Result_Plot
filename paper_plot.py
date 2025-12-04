@@ -63,7 +63,7 @@ def plot_qe_results(data):
         dataset_pretty=QE_DATASET_PRETTY,
         y_label="Pairing Efficiency [%]",
         x_label="Train Size [K]",
-        y_min=42,
+        y_min=(78.0, 20.0),
         logx=True,
         panel_ratio=(2, 2),  # << tunable left:right panel ratio
         x_indicator=1e3,  # << typical dataset size indicator
@@ -81,7 +81,7 @@ def plot_qe_results(data):
         dataset_pretty=QE_DATASET_PRETTY,
         y_label=r"precision on D [%]",
         x_label="Train Size [K]",
-        y_min=1.,
+        y_min=(1.0, 1.0),
         panel_ratio=(2, 2),  # << tunable left:right panel ratio
         x_indicator=1e3,  # << typical dataset size indicator
         logy=False,
@@ -250,12 +250,12 @@ def read_bsm_data(folder_path):
 def plot_bsm_results(data):
     from plot_styles.style import BSM_DATASET_MARKERS, BSM_DATASET_PRETTY
 
-    BSM_TRAIN_SIZE = [10, 30, 100, 300, 1000]  # in thousands
-    # BSM_TRAIN_SIZE = [30, 100, 300, 1000]  # in thousands
+    # BSM_TRAIN_SIZE = [10, 30, 100, 300, 1000]  # in thousands
+    BSM_TRAIN_SIZE = [10, 30, 100, 300]  # in thousands
     BSM_TYPICAL_DATASET_SIZE = 100  # in thousands
 
-    BSM_MODEL = ["Nominal", "Ablation", "SSL", "Scratch", "SPANet"]
-    # BSM_MODEL = ["Nominal", "Scratch", "SPANet", "SSL", "Ablation"]
+    # BSM_MODEL = ["Nominal", "Ablation", "SSL", "Scratch", "SPANet"]
+    BSM_MODEL = ["Nominal", "Scratch", "SSL", "SPANet"]
     # BSM_MODEL = ["Nominal", "Ablation"]
     BSM_HEAD = ["Cls", "Cls+Asn"]
     # BSM_HEAD = ["Cls", "Cls+Asn", "Cls+Seg", "Cls+Asn+Seg"]
@@ -267,10 +267,10 @@ def plot_bsm_results(data):
         dataset_markers=BSM_DATASET_MARKERS,
         dataset_pretty=BSM_DATASET_PRETTY,
         plot_dir="plot/BSM", f_name="loss.pdf",
-        fig_size=(12, 10),
+        fig_size=(12, 6),
         multi_panel_config={
-            "n_rows": 2,
-            "n_cols": 1,
+            "n_rows": 1,
+            "n_cols": 2,
             "configs": [
                 *BSM_HEAD
                 # "Cls+Seg", "Cls+Assign+Seg"
@@ -291,7 +291,7 @@ def plot_bsm_results(data):
         # head_order=["Cls+Asn", "Cls+Asn+Seg"],
         head_order=["Cls+Asn"],
         y_label="Pairing Efficiency [%]",
-        y_min=(65, 50),
+        y_min=(65, 20),
         logx=True,
         panel_ratio=(2, 2),  # << tunable left:right panel ratio
         x_indicator=BSM_TYPICAL_DATASET_SIZE,  # << typical dataset size indicator
@@ -406,7 +406,7 @@ def read_ad_data(file_path):
 
 
 def plot_ad_results(data):
-    AD_MODEL = ["Nominal", "Scratch"]
+    AD_MODEL = ["Nominal", "Scratch", "SSL"]
     # AD_MODEL = ["Nominal", "Scratch", "SSL", "Ablation"]
 
     plot_ad_sig_summary(
@@ -435,10 +435,10 @@ if __name__ == '__main__':
     qe_data = read_qe_data('data/QE_results_table.csv')
     plot_qe_results(qe_data)
 
-    # bsm_data = read_bsm_data('data/BSM')
-    # plot_bsm_results(bsm_data)
+    bsm_data = read_bsm_data('data/BSM')
+    plot_bsm_results(bsm_data)
 
-    # ad_data = read_ad_data("data/AD")
-    # plot_ad_results(ad_data)
+    ad_data = read_ad_data("data/AD")
+    plot_ad_results(ad_data)
 
     pass
