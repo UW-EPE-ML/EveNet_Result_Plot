@@ -1,17 +1,8 @@
 {
     "30": {
-        "classification": 0.4688571095466614,
-        "segmentation": 0.9434491395950317,
-        "total_loss": 1.4123062491416931
-    },
-    "40": {
-        "classification": 0.4570092260837555,
-        "segmentation": 1.1519017219543457,
-        "total_loss": 1.6089109480381012
-    },
-    "60": {
-        "classification": 0.4937177002429962,
-        "segmentation": 1.4244412183761597,
-        "total_loss": 1.9181589186191559
+        "classification": 0.4688151776790619,
+        "assignment": 1.732404351234436,
+        "segmentation": 0.9427614212036133,
+        "total_loss": 3.143980950117111
     }
 }
