@@ -66,12 +66,15 @@ def plot_model_bars(
         if not xb:
             continue
 
+        yerr_clean = [np.nan if err is None else err for err in yerrb]
+        yerr_to_use = None if not yerr_clean or np.all(np.isnan(yerr_clean)) else yerr_clean
+
         ax.bar(
             xb,
             yb,
             width=resolved_bar_width,
             color=MODEL_COLORS.get(model),
-            yerr=yerrb,
+            yerr=yerr_to_use,
             label=model,
             **bar_cfg,
         )
