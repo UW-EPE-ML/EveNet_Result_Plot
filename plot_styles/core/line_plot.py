@@ -36,20 +36,20 @@ def _select_heads(df: pd.DataFrame, head_order: Optional[Sequence[str]], head_fi
 
 
 def plot_models_line(
-    ax,
-    df: pd.DataFrame,
-    *,
-    x_col: str,
-    y_col: str,
-    model_order: Sequence[str],
-    train_sizes: Iterable[int],
-    dataset_markers: dict,
-    head_order: Optional[Sequence[str]] = None,
-    head_filter: Optional[str] = None,
-    y_unc_col: Optional[str] = None,
-    line_kwargs: Optional[dict] = None,
-    scatter_kwargs: Optional[dict] = None,
-    size_scale: float = 1.0,
+        ax,
+        df: pd.DataFrame,
+        *,
+        x_col: str,
+        y_col: str,
+        model_order: Sequence[str],
+        train_sizes: Iterable[int],
+        dataset_markers: dict,
+        head_order: Optional[Sequence[str]] = None,
+        head_filter: Optional[str] = None,
+        y_unc_col: Optional[str] = None,
+        line_kwargs: Optional[dict] = None,
+        scatter_kwargs: Optional[dict] = None,
+        size_scale: float = 1.0,
 ):
     """Draw model trajectories (line + scatter) on a provided axis.
 

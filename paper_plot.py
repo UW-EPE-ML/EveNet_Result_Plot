@@ -6,41 +6,70 @@ import numpy as np
 from functools import reduce
 
 from plot_styles.high_level.plot_loss import plot_loss
-from plot_styles.high_level.plot_bar_line import plot_bar_line, plot_metric_scatter, plot_metric_bar
-from plot_styles.sic import sic_plot, sic_plot_individual
+from plot_styles.high_level.plot_bar_line import plot_metric_scatter, plot_metric_bar
+from plot_styles.sic import sic_plot_individual
 from plot_styles.ad_bar import plot_ad_sig_summary, plot_ad_gen_summary
 from plot_styles.core.legend import plot_legend, plot_only_legend
-from plot_styles.core.style_axis import save_axis
 from plot_styles.core.theme import PlotStyle, scaled_fig_size, use_style
 from plot_styles.style import MODEL_COLORS, HEAD_LINESTYLES
 
-
 BITMAP_FORMATS = {"png", "jpg", "jpeg", "tiff", "bmp"}
 
-
 DEFAULT_QE_CONFIG = {
-    "train_sizes": [15, 148, 1475, 2950],
-    "models": ["Nominal", "Scratch", "SSL", "Ref."],
-    "heads": ["Cls", "Cls+Asn"],
+    # "train_sizes": [15, 148, 1475, 2950],
+    "train_sizes": [15, 148, 1475],
+    "models": ["Nominal", "Scratch", "SSL"],
+    "heads": [],
     "legend": {"legends": ["dataset", "heads", "models"]},
-    "loss": {"fig_size": (7, 6), "grid": True, "y_min": 0.82},
+    "loss": {"fig_size": (6, 6), "grid": False, "y_min": 0.82},
     "pair_scatter": {
+        "fig_size": (7, 6),
         "metric": "pairing",
         "y_label": "Pairing Efficiency [%]",
         "x_label": "Train Size [K]",
-        "y_min": 78.0,
+        "y_min": 20.0,
         "logx": True,
+        "x_indicator": 1e3,
+        "x_indicator_text_config": dict(
+            fraction_x=0.95,
+            fraction_y=21.5,
+            fmt="Typical SM dataset: 1M events",
+            fontsize=12,
+            color="gray",
+            ha="right",
+        )
     },
     "pair_bar": {
+        "fig_size": (4, 3.5),
         "metric": "pairing",
-        "y_label": "Pairing Efficiency [%]",
+        # "y_label": "Pairing Efficiency [%]",
+        "y_min": 78.0,
     },
     "delta_scatter": {
         "metric": "deltaD",
         "y_label": r"precision on D [%]",
         "x_label": "Train Size [K]",
+        "y_max": 6.0,
         "y_min": 1.0,
         "logx": True,
+        "x_indicator": 1e3,
+        "x_indicator_text_config": dict(
+            fraction_x=0.95,
+            fraction_y=1.1,
+            fmt="Typical SM dataset: 1M events",
+            fontsize=12,
+            color="gray",
+            ha="right",
+        ),
+        "y_indicator": 5.3,
+        "y_indicator_text_config": dict(
+            fraction_x=15,
+            fraction_y=1.01,
+            fmt=r"Reference Significance: 5.3$\sigma$",
+            fontsize=12,
+            color="gray",
+            ha="left",
+        )
     },
     "delta_bar": {
         "metric": "deltaD",
@@ -48,20 +77,28 @@ DEFAULT_QE_CONFIG = {
     },
 }
 
-
 DEFAULT_BSM_CONFIG = {
     "train_sizes": [10, 30, 100, 300],
     "typical_dataset_size": 100,
     "models": ["Nominal", "Scratch", "SSL", "SPANet"],
     "heads": ["Cls", "Cls+Asn"],
     "legend": {"legends": ["dataset", "heads", "models"]},
-    "loss": {"fig_size": (7, 6), "grid": True},
+    "loss": {"fig_size": (7, 6), "grid": False},
     "pair_scatter": {
         "metric": "pairing",
         "y_label": "Pairing Efficiency [%]",
         "x_label": "Train Size [K]",
-        "y_min": 65.0,
+        "y_min": 20.0,
         "logx": True,
+        "x_indicator": 100,
+        "x_indicator_text_config": dict(
+            fraction_x=0.95,
+            fraction_y=20.75,
+            fmt="Typical BSM dataset: 100K events",
+            fontsize=12,
+            color="gray",
+            ha="right",
+        )
     },
     "pair_bar": {
         "metric": "pairing",
@@ -69,10 +106,17 @@ DEFAULT_BSM_CONFIG = {
     },
     "sic": {
         "x_indicator": 100,
-        "y_min": [0, 0, 0.85],
+        "x_indicator_text_config": dict(
+            fraction_x=0.95,
+            fraction_y=0.020,
+            fmt="Typical BSM dataset: 100K events",
+            fontsize=12,
+            color="gray",
+            ha="right",
+        ),
+        "y_min": [0, 0, 0.75],
     },
 }
-
 
 DEFAULT_AD_CONFIG = {
     "models": ["Nominal", "Scratch", "SSL"],
@@ -163,21 +207,21 @@ def _merge_configs(default: dict, override: dict | None) -> dict:
 
 
 def plot_task_legend(
-    *,
-    plot_dir: str,
-    model_order,
-    train_sizes,
-    dataset_markers,
-    dataset_pretty,
-    head_order=None,
-    legends=None,
-    file_format: str = "pdf",
-    dpi: int | None = None,
-    f_name: str = "legend",
-    fig_size: tuple[float, float] = (7.5, 2.5),
-    fig_scale: float | None = None,
-    fig_aspect: float | None = None,
-    style: PlotStyle | None = None,
+        *,
+        plot_dir: str,
+        model_order,
+        train_sizes,
+        dataset_markers,
+        dataset_pretty,
+        head_order=None,
+        legends=None,
+        file_format: str = "pdf",
+        dpi: int | None = None,
+        f_name: str = "legend",
+        fig_size: tuple[float, float] = (7.5, 2.5),
+        fig_scale: float | None = None,
+        fig_aspect: float | None = None,
+        style: PlotStyle | None = None,
 ):
     """Render a standalone legend shared by a task's plots."""
 
@@ -227,18 +271,18 @@ def read_qe_data(file_path):
 
 
 def plot_qe_results(
-    data,
-    *,
-    output_root: str = "plot",
-    file_format: str = "pdf",
-    dpi: int | None = None,
-    save_individual_axes: bool = True,
-    with_legend: bool = True,
-    style: PlotStyle | None = None,
-    fig_scale: float | None = None,
-    fig_aspect: float | None = None,
-    bar_train_size: int | None = None,
-    config: dict | None = None,
+        data,
+        *,
+        output_root: str = "plot",
+        file_format: str = "pdf",
+        dpi: int | None = None,
+        save_individual_axes: bool = True,
+        with_legend: bool = True,
+        style: PlotStyle | None = None,
+        fig_scale: float | None = None,
+        fig_aspect: float | None = None,
+        bar_train_size: int | None = None,
+        config: dict | None = None,
 ):
     from plot_styles.style import QE_DATASET_MARKERS, QE_DATASET_PRETTY
 
@@ -568,18 +612,18 @@ def read_bsm_data(folder_path):
 
 
 def plot_bsm_results(
-    data,
-    *,
-    output_root: str = "plot",
-    file_format: str = "pdf",
-    dpi: int | None = None,
-    save_individual_axes: bool = True,
-    with_legend: bool = True,
-    style: PlotStyle | None = None,
-    fig_scale: float | None = None,
-    fig_aspect: float | None = None,
-    bar_train_size: int | None = None,
-    config: dict | None = None,
+        data,
+        *,
+        output_root: str = "plot",
+        file_format: str = "pdf",
+        dpi: int | None = None,
+        save_individual_axes: bool = True,
+        with_legend: bool = True,
+        style: PlotStyle | None = None,
+        fig_scale: float | None = None,
+        fig_aspect: float | None = None,
+        bar_train_size: int | None = None,
+        config: dict | None = None,
 ):
     from plot_styles.style import BSM_DATASET_MARKERS, BSM_DATASET_PRETTY
 
@@ -595,7 +639,8 @@ def plot_bsm_results(
 
     loss_outputs = {}
     for head in head_iter:
-        head_df = data[(data["mass_a"] == "30") & (data["head"] == head)] if head is not None else data[data["mass_a"] == "30"]
+        head_df = data[(data["mass_a"] == "30") & (data["head"] == head)] if head is not None else data[
+            data["mass_a"] == "30"]
         fig, axes, active_models = plot_loss(
             head_df,
             train_sizes=cfg["train_sizes"],
@@ -691,6 +736,7 @@ def plot_bsm_results(
         dataset_markers=BSM_DATASET_MARKERS,
         dataset_pretty=BSM_DATASET_PRETTY,
         x_indicator=sic_cfg.get("x_indicator", cfg["typical_dataset_size"]),
+        x_indicator_text_config=sic_cfg.get("x_indicator_text_config", None),
         y_min=sic_cfg.get("y_min", [0, 0, 0.85]),
         fig_scale=scale,
         fig_aspect=fig_aspect,
@@ -716,14 +762,14 @@ def plot_bsm_results(
 
 
 def plot_qe_results_webpage(
-    data,
-    *,
-    output_root: str = "plot",
-    file_format: str = "pdf",
-    dpi: int | None = None,
-    style: PlotStyle | None = None,
-    fig_scale: float | None = None,
-    fig_aspect: float | None = None,
+        data,
+        *,
+        output_root: str = "plot",
+        file_format: str = "pdf",
+        dpi: int | None = None,
+        style: PlotStyle | None = None,
+        fig_scale: float | None = None,
+        fig_aspect: float | None = None,
 ):
     from plot_styles.style import QE_DATASET_MARKERS, QE_DATASET_PRETTY
 
@@ -781,14 +827,14 @@ def plot_qe_results_webpage(
 
 
 def plot_bsm_results_webpage(
-    data,
-    *,
-    output_root: str = "plot",
-    file_format: str = "pdf",
-    dpi: int | None = None,
-    style: PlotStyle | None = None,
-    fig_scale: float | None = None,
-    fig_aspect: float | None = None,
+        data,
+        *,
+        output_root: str = "plot",
+        file_format: str = "pdf",
+        dpi: int | None = None,
+        style: PlotStyle | None = None,
+        fig_scale: float | None = None,
+        fig_aspect: float | None = None,
 ):
     from plot_styles.style import BSM_DATASET_MARKERS, BSM_DATASET_PRETTY
 
@@ -935,16 +981,16 @@ def read_ad_data(file_path):
 
 
 def plot_ad_results(
-    data,
-    *,
-    output_root: str = "plot",
-    file_format: str = "pdf",
-    dpi: int | None = None,
-    save_individual_axes: bool = True,
-    style: PlotStyle | None = None,
-    fig_scale: float | None = None,
-    fig_aspect: float | None = None,
-    config: dict | None = None,
+        data,
+        *,
+        output_root: str = "plot",
+        file_format: str = "pdf",
+        dpi: int | None = None,
+        save_individual_axes: bool = True,
+        style: PlotStyle | None = None,
+        fig_scale: float | None = None,
+        fig_aspect: float | None = None,
+        config: dict | None = None,
 ):
     cfg = _merge_configs(DEFAULT_AD_CONFIG, config)
 
@@ -987,14 +1033,14 @@ def plot_ad_results(
 
 
 def plot_ad_results_webpage(
-    data,
-    *,
-    output_root: str = "plot",
-    file_format: str = "pdf",
-    dpi: int | None = None,
-    style: PlotStyle | None = None,
-    fig_scale: float | None = None,
-    fig_aspect: float | None = None,
+        data,
+        *,
+        output_root: str = "plot",
+        file_format: str = "pdf",
+        dpi: int | None = None,
+        style: PlotStyle | None = None,
+        fig_scale: float | None = None,
+        fig_aspect: float | None = None,
 ):
     plot_dir = os.path.join(output_root, "AD")
 
@@ -1017,17 +1063,17 @@ def plot_ad_results_webpage(
 
 
 def plot_final_paper_figures(
-    *,
-    qe_data=None,
-    bsm_data=None,
-    ad_data=None,
-    output_root: str = "plot",
-    file_format: str = "pdf",
-    dpi: int | None = None,
-    include_legends: bool = False,
-    style: PlotStyle | None = None,
-    figure_options: dict | None = None,
-    task_configs: dict | None = None,
+        *,
+        qe_data=None,
+        bsm_data=None,
+        ad_data=None,
+        output_root: str = "plot",
+        file_format: str = "pdf",
+        dpi: int | None = None,
+        include_legends: bool = False,
+        style: PlotStyle | None = None,
+        figure_options: dict | None = None,
+        task_configs: dict | None = None,
 ):
     """High-level entry point for generating the final paper plots.
 

@@ -90,7 +90,8 @@ def _draw_sic_curve(ax_curve, curve_traces, head_order, style: PlotStyle | None 
                 )
 
 
-def _draw_sic_bar(ax_bar, grouped_val, grouped_err, model_order, head_order, train_sizes, style: PlotStyle | None = None):
+def _draw_sic_bar(ax_bar, grouped_val, grouped_err, model_order, head_order, train_sizes,
+                  style: PlotStyle | None = None):
     n_heads = len(head_order)
     n_models = len(model_order)
     indices = np.arange(n_heads)
@@ -131,16 +132,17 @@ def _draw_sic_bar(ax_bar, grouped_val, grouped_err, model_order, head_order, tra
 
 
 def _draw_sic_scatter(
-    ax_scatter,
-    grouped_val,
-    grouped_err,
-    model_order,
-    head_order,
-    train_sizes,
-    dataset_markers,
-    style: PlotStyle | None = None,
-    *,
-    x_indicator=None,
+        ax_scatter,
+        grouped_val,
+        grouped_err,
+        model_order,
+        head_order,
+        train_sizes,
+        dataset_markers,
+        style: PlotStyle | None = None,
+        *,
+        x_indicator=None,
+        x_indicator_text_config=None,
 ):
     for model in model_order:
         for head in head_order:
@@ -183,15 +185,16 @@ def _draw_sic_scatter(
     if x_indicator:
         ax_scatter.axvline(x=x_indicator, color="gray", linestyle="--", linewidth=1.5, alpha=0.7)
         trans = blended_transform_factory(ax_scatter.transData, ax_scatter.transAxes)
-        ax_scatter.text(
-            x_indicator * 0.95,
-            0.025,
-            f"Typical HEP dataset: {x_indicator:.0f}k events",
-            fontsize=12,
-            color="gray",
-            transform=trans,
-            ha="right",
-        )
+        if x_indicator_text_config:
+            ax_scatter.text(
+                x_indicator * x_indicator_text_config.get("fraction_x", 0.95),
+                x_indicator_text_config.get("fraction_y", 0.025),
+                x_indicator_text_config.get("fmt", "Typical HEP dataset: 100k events"),
+                fontsize=x_indicator_text_config.get("fontsize", 12),
+                color=x_indicator_text_config.get("color", "gray"),
+                ha=x_indicator_text_config.get("ha", "right"),
+                transform=trans,
+            )
 
 
 def _style_sic_axes(ax_curve, ax_bar, ax_scatter, head_order, *, y_min=None, style: PlotStyle | None = None):
@@ -222,24 +225,24 @@ def _style_sic_axes(ax_curve, ax_bar, ax_scatter, head_order, *, y_min=None, sty
 
 
 def sic_plot(
-    data_df,
-    model_order,
-    train_sizes,
-    dataset_markers,
-    dataset_pretty,
-    head_order,
-    y_min=None,
-    x_indicator=None,
-    fig_size=(20, 6),
-    fig_scale: float = 1.0,
-    fig_aspect: float | None = None,
-    plot_dir=None,
-    f_name=None,
-    with_legend: bool = True,
-    save_individual_axes: bool = False,
-    file_format: str = "pdf",
-    dpi: int | None = None,
-    style: PlotStyle | None = None,
+        data_df,
+        model_order,
+        train_sizes,
+        dataset_markers,
+        dataset_pretty,
+        head_order,
+        y_min=None,
+        x_indicator=None,
+        fig_size=(20, 6),
+        fig_scale: float = 1.0,
+        fig_aspect: float | None = None,
+        plot_dir=None,
+        f_name=None,
+        with_legend: bool = True,
+        save_individual_axes: bool = False,
+        file_format: str = "pdf",
+        dpi: int | None = None,
+        style: PlotStyle | None = None,
 ):
     curve_traces, grouped_val, grouped_err, active_models = _collect_sic_data(
         data_df, model_order, train_sizes, head_order, style
@@ -323,21 +326,22 @@ def sic_plot(
 
 
 def sic_plot_individual(
-    data_df,
-    model_order,
-    train_sizes,
-    dataset_markers,
-    dataset_pretty,
-    head_order,
-    *,
-    y_min=None,
-    x_indicator=None,
-    fig_size_curve=(7, 6),
-    fig_size_bar=(6, 6),
-    fig_size_scatter=(7, 6),
-    fig_scale: float = 1.0,
-    fig_aspect: float | None = None,
-    style: PlotStyle | None = None,
+        data_df,
+        model_order,
+        train_sizes,
+        dataset_markers,
+        dataset_pretty,
+        head_order,
+        *,
+        y_min=None,
+        x_indicator=None,
+        x_indicator_text_config=None,
+        fig_size_curve=(7, 6),
+        fig_size_bar=(6, 6),
+        fig_size_scatter=(7, 6),
+        fig_scale: float = 1.0,
+        fig_aspect: float | None = None,
+        style: PlotStyle | None = None,
 ):
     curve_traces, grouped_val, grouped_err, active_models = _collect_sic_data(
         data_df, model_order, train_sizes, head_order, style
@@ -363,6 +367,7 @@ def sic_plot_individual(
         dataset_markers,
         style,
         x_indicator=x_indicator,
+        x_indicator_text_config=x_indicator_text_config,
     )
 
     _style_sic_axes(ax_curve, ax_bar, ax_scatter, head_order, y_min=y_min, style=style)

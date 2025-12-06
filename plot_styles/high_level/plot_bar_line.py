@@ -14,27 +14,27 @@ from plot_styles.core.theme import PlotStyle, scaled_fig_size, use_style
 
 
 def plot_bar_line(
-    data_df,
-    *,
-    metric: str,
-    model_order: Sequence[str],
-    train_sizes: Sequence[int],
-    dataset_markers: dict,
-    dataset_pretty: dict,
-    head_order: Optional[Sequence[str]] = None,
-    y_label: str = "Metric",
-    x_label: str = "Train Size [K]",
-    y_min: Optional[float] = None,
-    fig_size=(14, 6),
-    fig_scale: float = 1.0,
-    fig_aspect: Optional[float] = None,
-    panel_ratio=(3, 2),
-    x_indicator: Optional[float] = None,
-    logy: bool = False,
-    logx: bool = False,
-    save_path: Optional[str] = None,
-    bar_train_size: Optional[int] = None,
-    style: PlotStyle | None = None,
+        data_df,
+        *,
+        metric: str,
+        model_order: Sequence[str],
+        train_sizes: Sequence[int],
+        dataset_markers: dict,
+        dataset_pretty: dict,
+        head_order: Optional[Sequence[str]] = None,
+        y_label: str = "Metric",
+        x_label: str = "Train Size [K]",
+        y_min: Optional[float] = None,
+        fig_size=(14, 6),
+        fig_scale: float = 1.0,
+        fig_aspect: Optional[float] = None,
+        panel_ratio=(3, 2),
+        x_indicator: Optional[float] = None,
+        logy: bool = False,
+        logx: bool = False,
+        save_path: Optional[str] = None,
+        bar_train_size: Optional[int] = None,
+        style: PlotStyle | None = None,
 ) -> tuple:
     """Render paired bar/line panels for a given metric.
 
@@ -104,23 +104,28 @@ def plot_bar_line(
 
 
 def plot_metric_scatter(
-    data_df,
-    *,
-    metric: str,
-    model_order: Sequence[str],
-    train_sizes: Sequence[int],
-    dataset_markers: dict,
-    dataset_pretty: dict,
-    head_order: Optional[Sequence[str]] = None,
-    y_label: str = "Metric",
-    x_label: str = "Train Size [K]",
-    y_min: Optional[float] = None,
-    fig_size=(7, 6),
-    fig_scale: float = 1.0,
-    fig_aspect: Optional[float] = None,
-    logy: bool = False,
-    logx: bool = False,
-    style: PlotStyle | None = None,
+        data_df,
+        *,
+        metric: str,
+        model_order: Sequence[str],
+        train_sizes: Sequence[int],
+        dataset_markers: dict,
+        dataset_pretty: dict,
+        head_order: Optional[Sequence[str]] = None,
+        y_label: str = "Metric",
+        x_label: str = "Train Size [K]",
+        y_max: Optional[float] = None,
+        y_min: Optional[float] = None,
+        x_indicator: Optional[float] = None,
+        x_indicator_text_config: Optional[dict] = None,
+        y_indicator: Optional[float] = None,
+        y_indicator_text_config: Optional[dict] = None,
+        fig_size=(7, 6),
+        fig_scale: float = 1.0,
+        fig_aspect: Optional[float] = None,
+        logy: bool = False,
+        logx: bool = False,
+        style: PlotStyle | None = None,
 ):
     """Render a single scatter/line plot for a metric across train sizes."""
 
@@ -148,10 +153,15 @@ def plot_metric_scatter(
         ax,
         y_label=y_label,
         x_label=x_label,
+        y_max=y_max,
         y_min=y_min,
         xscale=line_scale,
         yscale=y_scale,
         style=style,
+        x_indicator=x_indicator,
+        x_indicator_text_config=x_indicator_text_config,
+        y_indicator=y_indicator,
+        y_indicator_text_config=y_indicator_text_config,
     )
 
     active_models = [m for m in model_order if m in set(active_lines)]
@@ -159,18 +169,19 @@ def plot_metric_scatter(
 
 
 def plot_metric_bar(
-    data_df,
-    *,
-    metric: str,
-    model_order: Sequence[str],
-    head_order: Sequence[str],
-    train_size_for_bar: int,
-    y_label: str = "Metric",
-    fig_size=(6, 6),
-    fig_scale: float = 1.0,
-    fig_aspect: Optional[float] = None,
-    bar_kwargs: Optional[dict] = None,
-    style: PlotStyle | None = None,
+        data_df,
+        *,
+        metric: str,
+        model_order: Sequence[str],
+        head_order: Sequence[str],
+        train_size_for_bar: int,
+        y_label: str = "",
+        y_min: Optional[float] = None,
+        fig_size=(6, 6),
+        fig_scale: float = 1.0,
+        fig_aspect: Optional[float] = None,
+        bar_kwargs: Optional[dict] = None,
+        style: PlotStyle | None = None,
 ):
     """Render a grouped bar plot for a metric at a fixed train size."""
 
@@ -191,8 +202,9 @@ def plot_metric_bar(
     style_axis_basic(
         ax,
         y_label=y_label,
-        x_label="Full dataset size" if head_order == [None] else "Head",
+        x_label="" if head_order == [None] else "Head",
         style=style,
+        y_min=y_min,
     )
 
     return fig, ax, active_models

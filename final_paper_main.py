@@ -45,19 +45,19 @@ def build_figure_options():
 
     return {
         "qe": {
-            "output_root": ROOT / "QE",
+            "output_root": ROOT,
             "fig_scale": 1.0,
             "fig_aspect": None,
             "with_legend": False,
         },
         "bsm": {
-            "output_root": ROOT / "BSM",
+            "output_root": ROOT,
             "fig_scale": 1.0,
             "fig_aspect": None,
             "with_legend": False,
         },
         "ad": {
-            "output_root": ROOT / "AD",
+            "output_root": ROOT,
             "fig_scale": 1.0,
             "fig_aspect": None,
             "with_legend": False,

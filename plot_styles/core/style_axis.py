@@ -62,16 +62,20 @@ def apply_nature_axis_style(ax, *, style: PlotStyle | None = None):
 
 
 def style_axis_basic(
-    ax,
-    *,
-    xscale: Optional[str] = None,
-    yscale: Optional[str] = None,
-    y_label: str = "",
-    x_label: str = "",
-    y_min: Optional[float] = None,
-    x_indicator: Optional[float] = None,
-    grid: bool = False,
-    style: PlotStyle | None = None,
+        ax,
+        *,
+        xscale: Optional[str] = None,
+        yscale: Optional[str] = None,
+        y_label: str = "",
+        x_label: str = "",
+        y_max: Optional[float] = None,
+        y_min: Optional[float] = None,
+        x_indicator: Optional[float] = None,
+        x_indicator_text_config: Optional[dict] = None,
+        y_indicator: Optional[float] = None,
+        y_indicator_text_config: Optional[dict] = None,
+        grid: bool = False,
+        style: PlotStyle | None = None,
 ):
     """Apply common axis styling without touching figure layout.
 
@@ -99,6 +103,8 @@ def style_axis_basic(
 
     if y_min is not None:
         ax.set_ylim(bottom=y_min)
+    if y_max is not None:
+        ax.set_ylim(top=y_max)
 
     apply_nature_axis_style(ax, style=style)
 
@@ -107,6 +113,26 @@ def style_axis_basic(
 
     if x_indicator is not None:
         ax.axvline(x=x_indicator, color="gray", linestyle="--", linewidth=1.5, alpha=0.7)
+        if x_indicator_text_config:
+            ax.text(
+                x_indicator * x_indicator_text_config.get("fraction_x", 0.95),
+                x_indicator_text_config.get("fraction_y", 0.025),
+                x_indicator_text_config.get("fmt", "Typical HEP dataset: 100k events"),
+                fontsize=x_indicator_text_config.get("fontsize", 12),
+                color=x_indicator_text_config.get("color", "gray"),
+                ha=x_indicator_text_config.get("ha", "right"),
+            )
+    if y_indicator is not None:
+        ax.axhline(y=y_indicator, color="gray", linestyle="--", linewidth=1.5, alpha=0.7)
+        if y_indicator_text_config:
+            ax.text(
+                y_indicator_text_config.get("fraction_x", 0.025),
+                y_indicator * y_indicator_text_config.get("fraction_y", 0.95),
+                y_indicator_text_config.get("fmt", "Typical HEP dataset: 100k events"),
+                fontsize=y_indicator_text_config.get("fontsize", 12),
+                color=y_indicator_text_config.get("color", "gray"),
+                ha=y_indicator_text_config.get("ha", "right"),
+            )
 
 
 def save_axis(ax, plot_dir: str, f_name: str, dpi: Optional[int] = None):
