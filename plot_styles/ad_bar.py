@@ -5,7 +5,6 @@ import os
 from plot_styles.style import MODEL_COLORS, MODEL_PRETTY
 from plot_styles.utils import apply_nature_axis_style, plot_legend, save_axis
 from matplotlib.transforms import blended_transform_factory
-from plot_styles.core.theme import PlotStyle, scaled_fig_size, use_style
 
 sns.set_theme(style="white", font_scale=1.2)
 plt.rcParams.update({
@@ -26,8 +25,6 @@ def plot_ad_sig_summary(
         models_order=None,
         channels_order=None,
         fig_size=(10, 5),
-        fig_scale: float = 1.0,
-        fig_aspect: float | None = None,
         show_error=True,
         var="median",  # "median" or "mean"
         y_ref=None,
@@ -38,7 +35,6 @@ def plot_ad_sig_summary(
         with_legend: bool = True,
         dpi: int | None = None,
         file_format: str | None = None,
-        style: PlotStyle | None = None,
 ):
     # Which models appear?
     detected = sorted(df["model"].unique())
@@ -57,9 +53,7 @@ def plot_ad_sig_summary(
     # -------------------------------------------------------
     # Plotting
     # -------------------------------------------------------
-    with use_style(style):
-        resolved_size = scaled_fig_size(fig_size, scale=fig_scale, aspect_ratio=fig_aspect)
-        fig, ax = plt.subplots(figsize=resolved_size)
+    fig, ax = plt.subplots(figsize=fig_size)
 
     # benchmark_xpos = None
     base_xpos = None
@@ -123,7 +117,7 @@ def plot_ad_sig_summary(
         ch.replace("train-", "").replace("-test-", " → ") for ch in channels
     ], rotation=25, ha="right")
     ax.set_ylabel(y_label)
-    apply_nature_axis_style(ax, style=style)
+    apply_nature_axis_style(ax)
     if y_min is not None:
         ymin, ymax = ax.get_ylim()
         ax.set_ylim(bottom=y_min, top=max(y_max := ymax, y_min))
@@ -157,14 +151,12 @@ def plot_ad_sig_summary(
     # -------------------------------------------------------
     # Legend
     # -------------------------------------------------------
-    if with_legend:
-        plot_legend(
-            fig,
-            active_models=model_list,
-            model_colors=MODEL_COLORS,
-            legends=["calibration", "models"],
-            style=style,
-        )
+    if with_legend: plot_legend(
+        fig,
+        active_models=model_list,
+        model_colors=MODEL_COLORS,
+        legends=["calibration", "models"]
+    )
 
     plt.tight_layout(rect=(0.0, 0.0, 1.0, 0.95))
     def _with_ext(name: str) -> str:
@@ -189,8 +181,6 @@ def plot_ad_gen_summary(
         metric_left="mmd",
         metric_right="mean_calibration_difference",
         figsize=(10, 4),
-        fig_scale: float = 1.0,
-        fig_aspect: float | None = None,
         label_left="MMD",
         label_right=r"$\bar{\Delta}_{\rm calib}$",
         y_min_left=None,
@@ -201,7 +191,6 @@ def plot_ad_gen_summary(
         save_individual_axes: bool = False,
         dpi: int | None = None,
         file_format: str | None = None,
-        style: PlotStyle | None = None,
 ):
     """
     Two-panel Nature-style bar plot for after-cut metrics.
@@ -261,9 +250,7 @@ def plot_ad_gen_summary(
     # -------------------------------------------------------
     # Plotting helpers
     # -------------------------------------------------------
-    with use_style(style):
-        resolved_size = scaled_fig_size(figsize, scale=fig_scale, aspect_ratio=fig_aspect)
-        fig, axes = plt.subplots(1, 2, figsize=resolved_size, sharey=False)
+    fig, axes = plt.subplots(1, 2, figsize=figsize, sharey=False)
 
     def plot_panel(ax, metric_data, y_label, y_min=None, percentage=False):
         x_groups = ["OS", "SS"]
@@ -316,7 +303,7 @@ def plot_ad_gen_summary(
         ax.set_xticks(np.arange(2))
         ax.set_xticklabels(x_groups)
         ax.set_ylabel(y_label)
-        apply_nature_axis_style(ax, style=style)
+        apply_nature_axis_style(ax)
         if y_min is not None:
             ymin, ymax = ax.get_ylim()
             ax.set_ylim(bottom=y_min, top=max(ymax, y_min))
@@ -353,14 +340,12 @@ def plot_ad_gen_summary(
     # -------------------------------------------------------
     # Legend
     # -------------------------------------------------------
-    if with_legend:
-        plot_legend(
-            fig,
-            active_models=model_list,
-            model_colors=MODEL_COLORS,
-            legends=["calibration", "models"],
-            style=style,
-        )
+    if with_legend: plot_legend(
+        fig,
+        active_models=model_list,
+        model_colors=MODEL_COLORS,
+        legends=["calibration", "models"]
+    )
 
     plt.tight_layout(rect=(0.0, 0.0, 1.0, 0.95))
     if f_name is not None:
