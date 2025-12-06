@@ -7,6 +7,7 @@ import numpy as np
 from plot_styles.style import MODEL_COLORS, MODEL_PRETTY, HEAD_LINESTYLES
 import os
 from matplotlib.transforms import blended_transform_factory
+from plot_styles.core.theme import PlotStyle, scaled_fig_size, use_style
 
 
 def smooth_curve(y, window=31, poly=3):
@@ -28,37 +29,12 @@ def compute_sic_with_unc(TPR, FPR, FPR_unc):
     return SIC, SIC_unc
 
 
-def sic_plot(
-        data_df,
-        model_order,
-        train_sizes,
-        dataset_markers,
-        dataset_pretty,
-        head_order,
-        y_min=None,
-        x_indicator=None,
-        fig_size=(20, 6),
-        plot_dir=None,
-        f_name=None,
-        with_legend: bool = True,
-        save_individual_axes: bool = False,
-        file_format: str = "pdf",
-        dpi: int | None = None,
-):
-    # ============================================================
-    # FIGURE with 1:1:1
-    # ============================================================
-    fig = plt.figure(figsize=fig_size)
-    gs = GridSpec(1, 3, width_ratios=[1, 1, 1])
-
-    ax_curve = fig.add_subplot(gs[0])
-    ax_bar = fig.add_subplot(gs[1])
-    ax_scatter = fig.add_subplot(gs[2])
-
+def _collect_sic_data(data_df, model_order, train_sizes, head_order, style: PlotStyle | None = None):
     grouped_val = defaultdict(lambda: defaultdict(lambda: defaultdict(float)))  # head → model → max SIC
     grouped_err = defaultdict(lambda: defaultdict(lambda: defaultdict(float)))  # head → model → max SIC uncertainty
-
+    curve_traces = defaultdict(list)  # head -> list[(TPR, SIC, SIC_unc, model)]
     active_models = []
+
     for model in model_order:
         if model not in MODEL_COLORS:
             continue
@@ -75,43 +51,46 @@ def sic_plot(
             SIC_smooth = smooth_curve(SIC)
             SIC_unc_smooth = smooth_curve(SIC_unc)
 
-            # -------------------------------------------------------
-            # SIC Curve Plot (Only for full train_size)
-            # -------------------------------------------------------
-            if row["train_size"] == max(train_sizes) and row['head'] in head_order:
-                ax_curve.plot(
-                    TPR,
-                    SIC_smooth,
-                    color=MODEL_COLORS[model],
-                    linestyle=HEAD_LINESTYLES.get(row['head'], '-'),
-                    linewidth=2
-                )
+            if row["train_size"] == max(train_sizes) and row["head"] in head_order:
+                curve_traces[row["head"]].append((TPR, SIC_smooth, SIC_unc_smooth, model))
 
-                if row['head'] == "Cls":
-                    ax_curve.fill_between(
-                        TPR,
-                        SIC_smooth - SIC_unc_smooth,
-                        SIC_smooth + SIC_unc_smooth,
-                        color=MODEL_COLORS[model],
-                        alpha=0.2,
-                    )
-
-            # -------------------------------------------------------
-            # Bar Plot
-            # -------------------------------------------------------
-            # Compute max SIC on the raw (unsmoothed) or smooth curve — choose one
-            max_idx = np.argmax(SIC)  # or SIC_smooth
+            # Compute max SIC on the raw curve
+            max_idx = np.argmax(SIC)
             max_sic = SIC[max_idx]
             max_sic_unc = SIC_unc[max_idx]
 
-            # Store into grouped containers by head and model
             head_name = row["head"]
             grouped_val[head_name][model][row["train_size"]] = max_sic
             grouped_err[head_name][model][row["train_size"]] = max_sic_unc
 
         active_models.append(model)
 
-    # head_order = sorted(grouped_val.keys())
+    ordered_active = [m for m in model_order if m in set(active_models)]
+    return curve_traces, grouped_val, grouped_err, ordered_active
+
+
+def _draw_sic_curve(ax_curve, curve_traces, head_order, style: PlotStyle | None = None):
+    for head in head_order:
+        for TPR, SIC_smooth, SIC_unc_smooth, model in curve_traces.get(head, []):
+            ax_curve.plot(
+                TPR,
+                SIC_smooth,
+                color=MODEL_COLORS[model],
+                linestyle=HEAD_LINESTYLES.get(head, "-"),
+                linewidth=2 * (style.object_scale if style else 1.0),
+            )
+
+            if head == "Cls":
+                ax_curve.fill_between(
+                    TPR,
+                    SIC_smooth - SIC_unc_smooth,
+                    SIC_smooth + SIC_unc_smooth,
+                    color=MODEL_COLORS[model],
+                    alpha=0.2,
+                )
+
+
+def _draw_sic_bar(ax_bar, grouped_val, grouped_err, model_order, head_order, train_sizes, style: PlotStyle | None = None):
     n_heads = len(head_order)
     n_models = len(model_order)
     indices = np.arange(n_heads)
@@ -121,8 +100,52 @@ def sic_plot(
         xb, yb, yerrb = [], [], []
 
         for i_h, head in enumerate(head_order):
+            val = grouped_val.get(head, {}).get(model, {}).get(max(train_sizes), np.nan)
+            err = grouped_err.get(head, {}).get(model, {}).get(max(train_sizes), np.nan)
+
+            if np.isnan(val):
+                continue
+
+            xb.append(indices[i_h] + (i_m - (n_models - 1) / 2) * bar_width)
+            yb.append(val)
+            yerrb.append(err)
+
+        if not xb:
+            continue
+
+        ax_bar.bar(
+            xb,
+            yb,
+            width=bar_width,
+            color=MODEL_COLORS.get(model),
+            edgecolor="black",
+            alpha=0.9,
+            linewidth=0.8 * (style.object_scale if style else 1.0),
+            yerr=yerrb,
+            capsize=4,
+            label=model,
+        )
+
+    ax_bar.set_xticks(indices)
+    ax_bar.set_xticklabels(head_order)
+
+
+def _draw_sic_scatter(
+    ax_scatter,
+    grouped_val,
+    grouped_err,
+    model_order,
+    head_order,
+    train_sizes,
+    dataset_markers,
+    style: PlotStyle | None = None,
+    *,
+    x_indicator=None,
+):
+    for model in model_order:
+        for head in head_order:
             xs, ys, yerr, markers = [], [], [], []
-            for _, train_size in enumerate(train_sizes):
+            for train_size in train_sizes:
                 val = grouped_val.get(head, {}).get(model, {}).get(train_size, np.nan)
                 err = grouped_err.get(head, {}).get(model, {}).get(train_size, np.nan)
 
@@ -131,68 +154,61 @@ def sic_plot(
                 yerr.append(err)
                 markers.append(dataset_markers.get(str(train_size), "o"))
 
-                if train_size == max(train_sizes):
-                    xb.append(indices[i_h] + (i_m - (n_models - 1) / 2) * bar_width)
-                    yb.append(val)
-                    yerrb.append(err)
+            ax_scatter.plot(
+                xs,
+                ys,
+                color=MODEL_COLORS.get(model),
+                linestyle=HEAD_LINESTYLES.get(head, "-"),
+                linewidth=2 * (style.object_scale if style else 1.0),
+                alpha=0.9,
+            )
 
-            # ---- line ----
-            ax_scatter.plot(xs, ys,
-                            color=MODEL_COLORS[model],
-                            linestyle=HEAD_LINESTYLES[head],
-                            linewidth=2,
-                            alpha=0.9)
-
-            # ---- points ----
             for x, y, mk in zip(xs, ys, markers):
                 ax_scatter.scatter(
-                    x, y,
-                    s=140,
+                    x,
+                    y,
+                    s=140 * (style.object_scale if style else 1.0),
                     marker=mk,
-                    color=MODEL_COLORS[model],
+                    color=MODEL_COLORS.get(model),
                     edgecolor="black",
-                    linewidth=0.7,
+                    linewidth=0.7 * (style.object_scale if style else 1.0),
                     alpha=0.75,
                 )
 
-            # Only Cls gets uncertainty fill
             if head == "Cls" and any(yerr):
                 lower = [y - (u or 0) for y, u in zip(ys, yerr)]
                 upper = [y + (u or 0) for y, u in zip(ys, yerr)]
                 ax_scatter.fill_between(xs, lower, upper, color=MODEL_COLORS[model], alpha=0.18)
 
-        ax_bar.bar(
-            xb, yb,
-            width=bar_width,
-            color=MODEL_COLORS.get(model),
-            edgecolor="black",
-            alpha=0.9,
-            linewidth=0.8,
-            yerr=yerrb,
-            capsize=4,
-            label=model
+    if x_indicator:
+        ax_scatter.axvline(x=x_indicator, color="gray", linestyle="--", linewidth=1.5, alpha=0.7)
+        trans = blended_transform_factory(ax_scatter.transData, ax_scatter.transAxes)
+        ax_scatter.text(
+            x_indicator * 0.95,
+            0.025,
+            f"Typical HEP dataset: {x_indicator:.0f}k events",
+            fontsize=12,
+            color="gray",
+            transform=trans,
+            ha="right",
         )
 
-    # -------------------------------------------------------
-    # Axis styles
-    # -------------------------------------------------------
+
+def _style_sic_axes(ax_curve, ax_bar, ax_scatter, head_order, *, y_min=None, style: PlotStyle | None = None):
     ax_curve.set_xlabel("Signal efficiency")
     ax_curve.set_ylabel(r"SIC = $\epsilon_{\rm sig} / \sqrt{\epsilon_{\rm bkg}}$")
     ax_curve.grid(True, linestyle="--", alpha=0.5)
-    apply_nature_axis_style(ax_curve)
+    apply_nature_axis_style(ax_curve, style=style)
 
-    ax_bar.set_xticks(indices)
-    ax_bar.set_xticklabels(head_order)
     ax_bar.set_ylabel("Max SIC")
     ax_bar.grid(True, axis="y", linestyle="--", alpha=0.5)
-    apply_nature_axis_style(ax_bar)
+    apply_nature_axis_style(ax_bar, style=style)
 
     ax_scatter.set_xscale("log")
     ax_scatter.set_xlabel("Dataset Size")
     ax_scatter.grid(True, linestyle="--", linewidth=0.5, alpha=0.7)
-    # ax_scatter.set_yscale("log")
     ax_scatter.set_ylabel("Max SIC")
-    apply_nature_axis_style(ax_scatter)
+    apply_nature_axis_style(ax_scatter, style=style)
 
     if y_min is not None:
         if isinstance(y_min, list) or len(y_min) == 3:
@@ -204,19 +220,55 @@ def sic_plot(
             ax_bar.set_ylim(bottom=y_min)
             ax_scatter.set_ylim(bottom=y_min)
 
-    if x_indicator:
-        ax_scatter.axvline(x=x_indicator, color="gray", linestyle="--", linewidth=1.5, alpha=0.7)
-        trans = blended_transform_factory(ax_scatter.transData, ax_scatter.transAxes)
-        # annotation
-        ax_scatter.text(
-            x_indicator * 0.95,
-            0.025,
-            f"Typical HEP dataset: {x_indicator:.0f}k events",
-            fontsize=12,
-            color="gray",
-            transform=trans,
-            ha="right",
-        )
+
+def sic_plot(
+    data_df,
+    model_order,
+    train_sizes,
+    dataset_markers,
+    dataset_pretty,
+    head_order,
+    y_min=None,
+    x_indicator=None,
+    fig_size=(20, 6),
+    fig_scale: float = 1.0,
+    fig_aspect: float | None = None,
+    plot_dir=None,
+    f_name=None,
+    with_legend: bool = True,
+    save_individual_axes: bool = False,
+    file_format: str = "pdf",
+    dpi: int | None = None,
+    style: PlotStyle | None = None,
+):
+    curve_traces, grouped_val, grouped_err, active_models = _collect_sic_data(
+        data_df, model_order, train_sizes, head_order, style
+    )
+
+    with use_style(style):
+        resolved_size = scaled_fig_size(fig_size, scale=fig_scale, aspect_ratio=fig_aspect)
+        fig = plt.figure(figsize=resolved_size)
+        gs = GridSpec(1, 3, width_ratios=[1, 1, 1])
+
+        ax_curve = fig.add_subplot(gs[0])
+        ax_bar = fig.add_subplot(gs[1])
+        ax_scatter = fig.add_subplot(gs[2])
+
+    _draw_sic_curve(ax_curve, curve_traces, head_order, style)
+    _draw_sic_bar(ax_bar, grouped_val, grouped_err, model_order, head_order, train_sizes, style)
+    _draw_sic_scatter(
+        ax_scatter,
+        grouped_val,
+        grouped_err,
+        model_order,
+        head_order,
+        train_sizes,
+        dataset_markers,
+        style,
+        x_indicator=x_indicator,
+    )
+
+    _style_sic_axes(ax_curve, ax_bar, ax_scatter, head_order, y_min=y_min, style=style)
 
     def _with_ext(name: str) -> str:
         root, ext = os.path.splitext(name)
@@ -225,28 +277,27 @@ def sic_plot(
     bitmap_formats = {"png", "jpg", "jpeg", "tiff", "bmp"}
     save_kwargs = {"dpi": dpi} if file_format.lower() in bitmap_formats else {}
 
-    if save_individual_axes:
+    axes = [ax_curve, ax_bar, ax_scatter]
+
+    if save_individual_axes and plot_dir is not None:
         save_axis(
-            ax_curve,
+            axes[0],
             plot_dir,
             f_name=_with_ext("sic_curve"),
             dpi=dpi,
         )
         save_axis(
-            ax_bar,
+            axes[1],
             plot_dir,
             f_name=_with_ext("sic_bar"),
             dpi=dpi,
         )
         save_axis(
-            ax_scatter,
+            axes[2],
             plot_dir,
             f_name=_with_ext("sic_scatter"),
             dpi=dpi,
         )
-
-    active_models = list(set(active_models))
-    active_models = [m for m in model_order if m in active_models]
 
     if with_legend:
         plot_legend(
@@ -259,13 +310,65 @@ def sic_plot(
             head_order=head_order,
             head_linestyles=HEAD_LINESTYLES,
             legends=["dataset", "heads", "models"],
+            style=style,
         )
 
     plt.tight_layout(rect=(0, 0, 1, 0.93))
     if f_name is not None:
-        # ---- SAVE HERE ----
         os.makedirs(plot_dir, exist_ok=True)
         plot_des = os.path.join(plot_dir, _with_ext(f_name))
         fig.savefig(str(plot_des), bbox_inches="tight", **save_kwargs)
         print(f"Saved figure → {plot_des}")
-    return fig
+    return fig, axes, active_models
+
+
+def sic_plot_individual(
+    data_df,
+    model_order,
+    train_sizes,
+    dataset_markers,
+    dataset_pretty,
+    head_order,
+    *,
+    y_min=None,
+    x_indicator=None,
+    fig_size_curve=(7, 6),
+    fig_size_bar=(6, 6),
+    fig_size_scatter=(7, 6),
+    fig_scale: float = 1.0,
+    fig_aspect: float | None = None,
+    style: PlotStyle | None = None,
+):
+    curve_traces, grouped_val, grouped_err, active_models = _collect_sic_data(
+        data_df, model_order, train_sizes, head_order, style
+    )
+
+    with use_style(style):
+        curve_size = scaled_fig_size(fig_size_curve, scale=fig_scale, aspect_ratio=fig_aspect)
+        bar_size = scaled_fig_size(fig_size_bar, scale=fig_scale, aspect_ratio=fig_aspect)
+        scatter_size = scaled_fig_size(fig_size_scatter, scale=fig_scale, aspect_ratio=fig_aspect)
+        fig_curve, ax_curve = plt.subplots(figsize=curve_size)
+        fig_bar, ax_bar = plt.subplots(figsize=bar_size)
+        fig_scatter, ax_scatter = plt.subplots(figsize=scatter_size)
+
+    _draw_sic_curve(ax_curve, curve_traces, head_order, style)
+    _draw_sic_bar(ax_bar, grouped_val, grouped_err, model_order, head_order, train_sizes, style)
+    _draw_sic_scatter(
+        ax_scatter,
+        grouped_val,
+        grouped_err,
+        model_order,
+        head_order,
+        train_sizes,
+        dataset_markers,
+        style,
+        x_indicator=x_indicator,
+    )
+
+    _style_sic_axes(ax_curve, ax_bar, ax_scatter, head_order, y_min=y_min, style=style)
+
+    return {
+        "curve": (fig_curve, ax_curve),
+        "bar": (fig_bar, ax_bar),
+        "scatter": (fig_scatter, ax_scatter),
+    }, active_models
