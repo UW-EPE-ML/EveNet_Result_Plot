@@ -10,6 +10,7 @@ from matplotlib.lines import Line2D
 from matplotlib.patches import Rectangle
 
 from plot_styles.style import MODEL_PRETTY
+from plot_styles.core.theme import PlotStyle
 
 
 def plot_legend(
@@ -25,6 +26,7 @@ def plot_legend(
     legends: Optional[List[str]] = None,
     y_start: float = 1.01,
     y_gap: float = 0.07,
+    style: PlotStyle | None = None,
 ):
     """Attach stacked legends above the figure.
 
@@ -34,7 +36,14 @@ def plot_legend(
     if legends is None:
         legends = ["calibration", "dataset", "heads", "models"]
 
-    def add_legend(handles, labels, ncol, fontsize=14):
+    marker_scale = style.object_scale if style is not None else 1.0
+    legend_fontsize = (
+        style.legend_size
+        if style is not None and style.legend_size is not None
+        else plt.rcParams.get("legend.fontsize", 14)
+    )
+
+    def add_legend(handles, labels, ncol, fontsize=legend_fontsize):
         nonlocal y_start
         fig.legend(
             handles,
@@ -66,7 +75,7 @@ def plot_legend(
                 [0],
                 [0],
                 marker=dataset_markers[str(ds)],
-                markersize=14,
+                markersize=14 * marker_scale,
                 linestyle='',
                 color="gray",
                 markeredgecolor="black",
@@ -75,17 +84,17 @@ def plot_legend(
         ]
         handles = [Line2D([], [], linestyle="none", label="Dataset Size")] + ds_handles
         labels = ["Dataset Size"] + [dataset_pretty[str(ds)] for ds in train_sizes]
-        add_legend(handles, labels, ncol=len(ds_handles) + 1, fontsize=15)
+        add_legend(handles, labels, ncol=len(ds_handles) + 1)
 
     if "heads" in legends and head_order is not None and head_linestyles is not None:
         head_header = Line2D([], [], linestyle="none", label="Head Types")
         head_handles = [
-            Line2D([0], [0], color="black", linestyle=head_linestyles[h], linewidth=2, label=h)
+            Line2D([0], [0], color="black", linestyle=head_linestyles[h], linewidth=2 * marker_scale, label=h)
             for h in head_order
         ]
         handles = [head_header] + head_handles
         labels = ["Head Types"] + list(head_order)
-        add_legend(handles, labels, ncol=len(head_handles) + 1, fontsize=15)
+        add_legend(handles, labels, ncol=len(head_handles) + 1)
 
     if "models" in legends and active_models is not None and model_colors is not None:
         model_handles = [
@@ -93,7 +102,7 @@ def plot_legend(
                 [0],
                 [0],
                 marker='s',
-                markersize=14,
+                markersize=14 * marker_scale,
                 linestyle='',
                 color=model_colors[m],
                 markeredgecolor="black",
@@ -102,11 +111,11 @@ def plot_legend(
         ]
         handles = [Line2D([], [], linestyle="none", label="Model Types")] + model_handles
         labels = ["Model Types"] + [MODEL_PRETTY[m] for m in active_models]
-        add_legend(handles, labels, ncol=len(model_handles) + 1, fontsize=15)
+        add_legend(handles, labels, ncol=len(model_handles) + 1)
 
 
-def plot_only_legend(fig_size=(6, 2), **kwargs):
+def plot_only_legend(fig_size=(6, 2), style: PlotStyle | None = None, **kwargs):
     """Convenience wrapper to render legends on an empty canvas."""
     fig = plt.figure(figsize=fig_size)
-    plot_legend(fig, **kwargs)
+    plot_legend(fig, style=style, **kwargs)
     return fig
