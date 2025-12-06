@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 
 from plot_styles.core.line_plot import plot_models_line
 from plot_styles.core.style_axis import style_axis_basic
+from plot_styles.core.theme import PlotStyle, scaled_fig_size, use_style
 
 
 DEFAULT_LOSS_STYLE = {
@@ -29,9 +30,12 @@ def plot_loss(
     y_label: str = "Val loss",
     y_min: Optional[float] = None,
     fig_size=(12, 6),
+    fig_scale: float = 1.0,
+    fig_aspect: Optional[float] = None,
     multi_panel_config: Optional[dict] = None,
     grid: bool = False,
     save_path: Optional[str] = None,
+    style: PlotStyle | None = None,
 ) -> tuple:
     """Draw loss curves on one or more axes.
 
@@ -48,20 +52,22 @@ def plot_loss(
         the figure/axes for further composition.
     """
     axes = []
-    if multi_panel_config is None:
-        fig, ax = plt.subplots(figsize=fig_size)
-        axes.append(ax)
-        panel_heads = [None]
-    else:
-        fig, axes = plt.subplots(
-            multi_panel_config["n_rows"],
-            multi_panel_config["n_cols"],
-            figsize=fig_size,
-            sharex=False,
-            sharey=False,
-        )
-        axes = axes.flatten()
-        panel_heads = multi_panel_config.get("configs", [None] * len(axes))
+    with use_style(style):
+        resolved_size = scaled_fig_size(fig_size, scale=fig_scale, aspect_ratio=fig_aspect)
+        if multi_panel_config is None:
+            fig, ax = plt.subplots(figsize=resolved_size)
+            axes.append(ax)
+            panel_heads = [None]
+        else:
+            fig, axes = plt.subplots(
+                multi_panel_config["n_rows"],
+                multi_panel_config["n_cols"],
+                figsize=resolved_size,
+                sharex=False,
+                sharey=False,
+            )
+            axes = axes.flatten()
+            panel_heads = multi_panel_config.get("configs", [None] * len(axes))
 
     all_active: List[str] = []
     for ax, head_filter in zip(axes, panel_heads):
@@ -74,12 +80,14 @@ def plot_loss(
             train_sizes=train_sizes,
             dataset_markers=dataset_markers,
             head_filter=head_filter,
+            size_scale=style.object_scale if style is not None else 1.0,
         )
         style_axis_basic(
             ax,
             y_label=y_label,
             y_min=y_min,
             grid=grid,
+            style=style,
             **DEFAULT_LOSS_STYLE,
         )
         all_active.extend(active_models)
