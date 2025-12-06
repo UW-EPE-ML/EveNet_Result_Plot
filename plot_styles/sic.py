@@ -196,7 +196,7 @@ def _draw_sic_scatter(
 
 def _style_sic_axes(ax_curve, ax_bar, ax_scatter, head_order, *, y_min=None, style: PlotStyle | None = None):
     ax_curve.set_xlabel("Signal efficiency")
-    ax_curve.set_ylabel(r"SIC = $\\epsilon_{\\rm sig} / \\sqrt{\\epsilon_{\\rm bkg}}$")
+    ax_curve.set_ylabel(r"SIC = $\epsilon_{\rm sig} / \sqrt{\epsilon_{\rm bkg}}$")
     ax_curve.grid(True, linestyle="--", alpha=0.5)
     apply_nature_axis_style(ax_curve, style=style)
 
