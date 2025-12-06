@@ -18,6 +18,87 @@ from plot_styles.style import MODEL_COLORS, HEAD_LINESTYLES
 BITMAP_FORMATS = {"png", "jpg", "jpeg", "tiff", "bmp"}
 
 
+DEFAULT_QE_CONFIG = {
+    "train_sizes": [15, 148, 1475, 2950],
+    "models": ["Nominal", "Scratch", "SSL", "Ref."],
+    "heads": ["Cls", "Cls+Asn"],
+    "legend": {"legends": ["dataset", "heads", "models"]},
+    "loss": {"fig_size": (7, 6), "grid": True, "y_min": 0.82},
+    "pair_scatter": {
+        "metric": "pairing",
+        "y_label": "Pairing Efficiency [%]",
+        "x_label": "Train Size [K]",
+        "y_min": 78.0,
+        "logx": True,
+    },
+    "pair_bar": {
+        "metric": "pairing",
+        "y_label": "Pairing Efficiency [%]",
+    },
+    "delta_scatter": {
+        "metric": "deltaD",
+        "y_label": r"precision on D [%]",
+        "x_label": "Train Size [K]",
+        "y_min": 1.0,
+        "logx": True,
+    },
+    "delta_bar": {
+        "metric": "deltaD",
+        "y_label": r"precision on D [%]",
+    },
+}
+
+
+DEFAULT_BSM_CONFIG = {
+    "train_sizes": [10, 30, 100, 300],
+    "typical_dataset_size": 100,
+    "models": ["Nominal", "Scratch", "SSL", "SPANet"],
+    "heads": ["Cls", "Cls+Asn"],
+    "legend": {"legends": ["dataset", "heads", "models"]},
+    "loss": {"fig_size": (7, 6), "grid": True},
+    "pair_scatter": {
+        "metric": "pairing",
+        "y_label": "Pairing Efficiency [%]",
+        "x_label": "Train Size [K]",
+        "y_min": 65.0,
+        "logx": True,
+    },
+    "pair_bar": {
+        "metric": "pairing",
+        "y_label": "Pairing Efficiency [%]",
+    },
+    "sic": {
+        "x_indicator": 100,
+        "y_min": [0, 0, 0.85],
+    },
+}
+
+
+DEFAULT_AD_CONFIG = {
+    "models": ["Nominal", "Scratch", "SSL"],
+    "heads": [],
+    "sig": {
+        "channels_order": [
+            "train-OS-test-OS",
+            "train-SS-test-OS",
+            "train-OS-test-SS",
+            "train-SS-test-SS",
+        ],
+        "show_error": True,
+        "var": "median",
+        "y_ref": 6.4,
+        "f_name": "ad_significance",
+    },
+    "gen": {
+        "label_right": "calibration magnitude [%]",
+        "f_name": "ad_generation",
+        "y_min_left": 0.6,
+        "y_min_right": 0,
+        "save_individual_axes": True,
+    },
+}
+
+
 def _with_ext(name: str, file_format: str) -> str:
     root, ext = os.path.splitext(name)
     return name if ext else f"{root}.{file_format}"
@@ -27,6 +108,58 @@ def _save_kwargs(file_format: str, dpi: int | None):
     if file_format.lower() in BITMAP_FORMATS and dpi is not None:
         return {"dpi": dpi}
     return {}
+
+
+def _resolve_style(base: PlotStyle | None, override: PlotStyle | dict | None) -> PlotStyle | None:
+    """Return a figure style with optional overrides.
+
+    Parameters
+    ----------
+    base : PlotStyle | None
+        Global default style used when no overrides are provided.
+    override : PlotStyle | dict | None
+        Either an explicit :class:`PlotStyle` or a mapping of constructor
+        keyword arguments (e.g., ``{"base_font_size": 16, "object_scale": 1.2}``).
+    """
+
+    if override is None:
+        return base
+    if isinstance(override, PlotStyle):
+        return override
+
+    base_style = base or PlotStyle()
+    return PlotStyle(
+        base_font_size=override.get("base_font_size", base_style.base_font_size),
+        axis_label_size=override.get("axis_label_size", base_style.axis_label_size),
+        tick_label_size=override.get("tick_label_size", base_style.tick_label_size),
+        legend_size=override.get("legend_size", base_style.legend_size),
+        title_size=override.get("title_size", base_style.title_size),
+        figure_scale=override.get("figure_scale", base_style.figure_scale),
+        object_scale=override.get("object_scale", base_style.object_scale),
+    )
+
+
+def _merge_configs(default: dict, override: dict | None) -> dict:
+    """Deep-merge a user override into a default config without mutation."""
+
+    if override is None:
+        return default
+
+    merged = {}
+    for key, value in default.items():
+        if key in override:
+            if isinstance(value, dict) and isinstance(override[key], dict):
+                merged[key] = _merge_configs(value, override[key])
+            else:
+                merged[key] = override[key]
+        else:
+            merged[key] = value
+
+    for key, value in override.items():
+        if key not in merged:
+            merged[key] = value
+
+    return merged
 
 
 def plot_task_legend(
@@ -105,22 +238,18 @@ def plot_qe_results(
     fig_scale: float | None = None,
     fig_aspect: float | None = None,
     bar_train_size: int | None = None,
+    config: dict | None = None,
 ):
     from plot_styles.style import QE_DATASET_MARKERS, QE_DATASET_PRETTY
 
-    QE_CONFIG = {
-        "train_sizes": [15, 148, 1475, 2950],  # in thousands
-        "models": ["Nominal", "Scratch", "SSL", "Ref."],
-        # Set to an empty list if heads are not applicable for QE.
-        "heads": ["Cls", "Cls+Asn"],
-    }
+    cfg = _merge_configs(DEFAULT_QE_CONFIG, config)
 
     plot_dir = os.path.join(output_root, "QE")
     scale = fig_scale if fig_scale is not None else (style.figure_scale if style else 1.0)
 
     os.makedirs(plot_dir, exist_ok=True)
 
-    qe_heads = QE_CONFIG["heads"]
+    qe_heads = cfg["heads"]
     head_iter = qe_heads if qe_heads else [None]
 
     loss_outputs = {}
@@ -128,13 +257,11 @@ def plot_qe_results(
         head_df = data[data["head"] == head] if head is not None and "head" in data else data
         fig, axes, active_models = plot_loss(
             head_df,
-            train_sizes=QE_CONFIG["train_sizes"],
-            model_order=QE_CONFIG["models"],
+            train_sizes=cfg["train_sizes"],
+            model_order=cfg["models"],
             dataset_markers=QE_DATASET_MARKERS,
             dataset_pretty=QE_DATASET_PRETTY,
-            y_min=0.82,
-            fig_size=(7, 6),
-            grid=True,
+            **cfg["loss"],
             style=style,
             fig_scale=scale,
             fig_aspect=fig_aspect,
@@ -144,13 +271,13 @@ def plot_qe_results(
             plot_legend(
                 fig,
                 active_models=active_models,
-                train_sizes=QE_CONFIG["train_sizes"],
+                train_sizes=cfg["train_sizes"],
                 dataset_markers=QE_DATASET_MARKERS,
                 dataset_pretty=QE_DATASET_PRETTY,
                 model_colors=MODEL_COLORS,
                 head_order=[head] if head is not None else None,
                 head_linestyles=HEAD_LINESTYLES,
-                legends=["dataset", "models"],
+                **cfg.get("legend", {}),
                 style=style,
             )
 
@@ -165,19 +292,17 @@ def plot_qe_results(
             "active_models": active_models,
         }
 
-    pair_bar_size = bar_train_size or max(QE_CONFIG["train_sizes"])
+    pair_bar_size = bar_train_size or max(cfg["train_sizes"])
+    pair_scatter_cfg = cfg["pair_scatter"]
     fig_pair_scatter, ax_pair_scatter, active_pair = plot_metric_scatter(
         data,
-        metric="pairing",
-        model_order=QE_CONFIG["models"],
-        train_sizes=QE_CONFIG["train_sizes"],
+        metric=pair_scatter_cfg.get("metric", "pairing"),
+        model_order=cfg["models"],
+        train_sizes=cfg["train_sizes"],
         dataset_markers=QE_DATASET_MARKERS,
         dataset_pretty=QE_DATASET_PRETTY,
         head_order=qe_heads if qe_heads else None,
-        y_label="Pairing Efficiency [%]",
-        x_label="Train Size [K]",
-        y_min=78.0,
-        logx=True,
+        **{k: v for k, v in pair_scatter_cfg.items() if k not in {"metric"}},
         fig_scale=scale,
         fig_aspect=fig_aspect,
         style=style,
@@ -186,13 +311,13 @@ def plot_qe_results(
         plot_legend(
             fig_pair_scatter,
             active_models=active_pair,
-            train_sizes=QE_CONFIG["train_sizes"],
+            train_sizes=cfg["train_sizes"],
             dataset_markers=QE_DATASET_MARKERS,
             dataset_pretty=QE_DATASET_PRETTY,
             model_colors=MODEL_COLORS,
             head_order=qe_heads if qe_heads else None,
             head_linestyles=HEAD_LINESTYLES,
-            legends=["dataset", "heads", "models"],
+            **cfg.get("legend", {}),
             style=style,
         )
     fig_pair_scatter.savefig(
@@ -203,11 +328,11 @@ def plot_qe_results(
 
     fig_pair_bar, ax_pair_bar, _ = plot_metric_bar(
         data,
-        metric="pairing",
-        model_order=QE_CONFIG["models"],
+        metric=cfg["pair_bar"].get("metric", "pairing"),
+        model_order=cfg["models"],
         head_order=qe_heads if qe_heads else [None],
         train_size_for_bar=pair_bar_size,
-        y_label="Pairing Efficiency [%]",
+        **{k: v for k, v in cfg["pair_bar"].items() if k not in {"metric"}},
         fig_scale=scale,
         fig_aspect=fig_aspect,
         style=style,
@@ -218,18 +343,16 @@ def plot_qe_results(
         **_save_kwargs(file_format, dpi),
     )
 
+    delta_scatter_cfg = cfg["delta_scatter"]
     fig_delta_scatter, ax_delta_scatter, active_delta = plot_metric_scatter(
         data,
-        metric="deltaD",
-        model_order=QE_CONFIG["models"],
-        train_sizes=QE_CONFIG["train_sizes"],
+        metric=delta_scatter_cfg.get("metric", "deltaD"),
+        model_order=cfg["models"],
+        train_sizes=cfg["train_sizes"],
         dataset_markers=QE_DATASET_MARKERS,
         dataset_pretty=QE_DATASET_PRETTY,
         head_order=qe_heads if qe_heads else None,
-        y_label=r"precision on D [%]",
-        x_label="Train Size [K]",
-        y_min=1.0,
-        logx=True,
+        **{k: v for k, v in delta_scatter_cfg.items() if k not in {"metric"}},
         fig_scale=scale,
         fig_aspect=fig_aspect,
         style=style,
@@ -238,13 +361,13 @@ def plot_qe_results(
         plot_legend(
             fig_delta_scatter,
             active_models=active_delta,
-            train_sizes=QE_CONFIG["train_sizes"],
+            train_sizes=cfg["train_sizes"],
             dataset_markers=QE_DATASET_MARKERS,
             dataset_pretty=QE_DATASET_PRETTY,
             model_colors=MODEL_COLORS,
             head_order=qe_heads if qe_heads else None,
             head_linestyles=HEAD_LINESTYLES,
-            legends=["dataset", "heads", "models"],
+            **cfg.get("legend", {}),
             style=style,
         )
     fig_delta_scatter.savefig(
@@ -255,11 +378,11 @@ def plot_qe_results(
 
     fig_delta_bar, ax_delta_bar, _ = plot_metric_bar(
         data,
-        metric="deltaD",
-        model_order=QE_CONFIG["models"],
+        metric=cfg["delta_bar"].get("metric", "deltaD"),
+        model_order=cfg["models"],
         head_order=qe_heads if qe_heads else [None],
         train_size_for_bar=pair_bar_size,
-        y_label=r"precision on D [%]",
+        **{k: v for k, v in cfg["delta_bar"].items() if k not in {"metric"}},
         fig_scale=scale,
         fig_aspect=fig_aspect,
         style=style,
@@ -456,27 +579,18 @@ def plot_bsm_results(
     fig_scale: float | None = None,
     fig_aspect: float | None = None,
     bar_train_size: int | None = None,
+    config: dict | None = None,
 ):
     from plot_styles.style import BSM_DATASET_MARKERS, BSM_DATASET_PRETTY
 
-    BSM_CONFIG = {
-        # "train_sizes": [10, 30, 100, 300, 1000],  # in thousands
-        "train_sizes": [10, 30, 100, 300],  # in thousands
-        "typical_dataset_size": 100,  # in thousands
-        # "models": ["Nominal", "Ablation", "SSL", "Scratch", "SPANet"],
-        "models": ["Nominal", "Scratch", "SSL", "SPANet"],
-        # "models": ["Nominal", "Ablation"],
-        # Set to an empty list if heads are not applicable for BSM.
-        "heads": ["Cls", "Cls+Asn"],
-        # "heads": ["Cls", "Cls+Asn", "Cls+Seg", "Cls+Asn+Seg"],
-    }
+    cfg = _merge_configs(DEFAULT_BSM_CONFIG, config)
 
     plot_dir = os.path.join(output_root, "BSM")
     scale = fig_scale if fig_scale is not None else (style.figure_scale if style else 1.0)
 
     os.makedirs(plot_dir, exist_ok=True)
 
-    bsm_heads = BSM_CONFIG["heads"]
+    bsm_heads = cfg["heads"]
     head_iter = bsm_heads if bsm_heads else [None]
 
     loss_outputs = {}
@@ -484,12 +598,11 @@ def plot_bsm_results(
         head_df = data[(data["mass_a"] == "30") & (data["head"] == head)] if head is not None else data[data["mass_a"] == "30"]
         fig, axes, active_models = plot_loss(
             head_df,
-            train_sizes=BSM_CONFIG["train_sizes"],
-            model_order=BSM_CONFIG["models"],
+            train_sizes=cfg["train_sizes"],
+            model_order=cfg["models"],
             dataset_markers=BSM_DATASET_MARKERS,
             dataset_pretty=BSM_DATASET_PRETTY,
-            fig_size=(7, 6),
-            grid=True,
+            **cfg["loss"],
             style=style,
             fig_scale=scale,
             fig_aspect=fig_aspect,
@@ -498,13 +611,13 @@ def plot_bsm_results(
             plot_legend(
                 fig,
                 active_models=active_models,
-                train_sizes=BSM_CONFIG["train_sizes"],
+                train_sizes=cfg["train_sizes"],
                 dataset_markers=BSM_DATASET_MARKERS,
                 dataset_pretty=BSM_DATASET_PRETTY,
                 model_colors=MODEL_COLORS,
                 head_order=[head] if head is not None else None,
                 head_linestyles=HEAD_LINESTYLES,
-                legends=["dataset", "models"],
+                **cfg.get("legend", {}),
                 style=style,
             )
         fig.savefig(
@@ -518,19 +631,17 @@ def plot_bsm_results(
             "active_models": active_models,
         }
 
-    pair_bar_size = bar_train_size or BSM_CONFIG["typical_dataset_size"]
+    pair_bar_size = bar_train_size or cfg["typical_dataset_size"]
+    pair_scatter_cfg = cfg["pair_scatter"]
     fig_pair_scatter, ax_pair_scatter, active_pair = plot_metric_scatter(
         data[data["mass_a"] == "30"],
-        metric="pairing",
-        model_order=BSM_CONFIG["models"],
-        train_sizes=BSM_CONFIG["train_sizes"],
+        metric=pair_scatter_cfg.get("metric", "pairing"),
+        model_order=cfg["models"],
+        train_sizes=cfg["train_sizes"],
         dataset_markers=BSM_DATASET_MARKERS,
         dataset_pretty=BSM_DATASET_PRETTY,
         head_order=bsm_heads if bsm_heads else None,
-        y_label="Pairing Efficiency [%]",
-        x_label="Train Size [K]",
-        y_min=65,
-        logx=True,
+        **{k: v for k, v in pair_scatter_cfg.items() if k not in {"metric"}},
         fig_scale=scale,
         fig_aspect=fig_aspect,
         style=style,
@@ -539,13 +650,13 @@ def plot_bsm_results(
         plot_legend(
             fig_pair_scatter,
             active_models=active_pair,
-            train_sizes=BSM_CONFIG["train_sizes"],
+            train_sizes=cfg["train_sizes"],
             dataset_markers=BSM_DATASET_MARKERS,
             dataset_pretty=BSM_DATASET_PRETTY,
             model_colors=MODEL_COLORS,
             head_order=bsm_heads if bsm_heads else None,
             head_linestyles=HEAD_LINESTYLES,
-            legends=["dataset", "heads", "models"],
+            **cfg.get("legend", {}),
             style=style,
         )
     fig_pair_scatter.savefig(
@@ -556,11 +667,11 @@ def plot_bsm_results(
 
     fig_pair_bar, ax_pair_bar, _ = plot_metric_bar(
         data[data["mass_a"] == "30"],
-        metric="pairing",
-        model_order=BSM_CONFIG["models"],
+        metric=cfg["pair_bar"].get("metric", "pairing"),
+        model_order=cfg["models"],
         head_order=bsm_heads if bsm_heads else [None],
         train_size_for_bar=pair_bar_size,
-        y_label="Pairing Efficiency [%]",
+        **{k: v for k, v in cfg["pair_bar"].items() if k not in {"metric"}},
         fig_scale=scale,
         fig_aspect=fig_aspect,
         style=style,
@@ -571,15 +682,16 @@ def plot_bsm_results(
         **_save_kwargs(file_format, dpi),
     )
 
+    sic_cfg = cfg["sic"]
     sic_figs, active_sic = sic_plot_individual(
         data[data["mass_a"] == "30"],
-        model_order=BSM_CONFIG["models"],
-        train_sizes=BSM_CONFIG["train_sizes"],
+        model_order=cfg["models"],
+        train_sizes=cfg["train_sizes"],
         head_order=bsm_heads if bsm_heads else None,
         dataset_markers=BSM_DATASET_MARKERS,
         dataset_pretty=BSM_DATASET_PRETTY,
-        x_indicator=BSM_CONFIG["typical_dataset_size"],
-        y_min=[0, 0, 0.85],
+        x_indicator=sic_cfg.get("x_indicator", cfg["typical_dataset_size"]),
+        y_min=sic_cfg.get("y_min", [0, 0, 0.85]),
         fig_scale=scale,
         fig_aspect=fig_aspect,
         style=style,
@@ -832,25 +944,24 @@ def plot_ad_results(
     style: PlotStyle | None = None,
     fig_scale: float | None = None,
     fig_aspect: float | None = None,
+    config: dict | None = None,
 ):
-    AD_CONFIG = {
-        "models": ["Nominal", "Scratch", "SSL"],
-        # "models": ["Nominal", "Scratch", "SSL", "Ablation"],
-        # AD plots currently have no head distinction; keep here for configurability.
-        "heads": [],
-    }
+    cfg = _merge_configs(DEFAULT_AD_CONFIG, config)
 
     plot_dir = os.path.join(output_root, "AD")
     scale = fig_scale if fig_scale is not None else (style.figure_scale if style else 1.0)
 
     plot_ad_sig_summary(
         data['sig'],
-        models_order=AD_CONFIG["models"],
-        channels_order=["train-OS-test-OS", "train-SS-test-OS", "train-OS-test-SS", "train-SS-test-SS"],
-        show_error=True, var="median", f_name=_with_ext("ad_significance", file_format), plot_dir=plot_dir,
+        models_order=cfg["models"],
+        channels_order=cfg["sig"]["channels_order"],
+        show_error=cfg["sig"].get("show_error", True),
+        var=cfg["sig"].get("var", "median"),
+        f_name=_with_ext(cfg["sig"].get("f_name", "ad_significance"), file_format),
+        plot_dir=plot_dir,
         dpi=dpi,
         file_format=file_format,
-        y_ref=6.4,
+        y_ref=cfg["sig"].get("y_ref", 6.4),
         style=style,
         fig_scale=scale,
         fig_aspect=fig_aspect,
@@ -858,13 +969,13 @@ def plot_ad_results(
 
     plot_ad_gen_summary(
         data['gen'],
-        models_order=AD_CONFIG["models"],
-        label_right="calibration magnitude [%]",
-        f_name=_with_ext("ad_generation", file_format),
+        models_order=cfg["models"],
+        label_right=cfg["gen"].get("label_right", "calibration magnitude [%]"),
+        f_name=_with_ext(cfg["gen"].get("f_name", "ad_generation"), file_format),
         plot_dir=plot_dir,
-        y_min_left=0.6,
-        y_min_right=0,
-        save_individual_axes=save_individual_axes,
+        y_min_left=cfg["gen"].get("y_min_left", 0.6),
+        y_min_right=cfg["gen"].get("y_min_right", 0),
+        save_individual_axes=cfg["gen"].get("save_individual_axes", save_individual_axes),
         dpi=dpi,
         file_format=file_format,
         style=style,
@@ -903,6 +1014,97 @@ def plot_ad_results_webpage(
         "sig": [os.path.join(plot_dir, _with_ext("ad_significance", file_format))],
         "gen": [os.path.join(plot_dir, _with_ext("ad_generation", file_format))],
     }
+
+
+def plot_final_paper_figures(
+    *,
+    qe_data=None,
+    bsm_data=None,
+    ad_data=None,
+    output_root: str = "plot",
+    file_format: str = "pdf",
+    dpi: int | None = None,
+    include_legends: bool = False,
+    style: PlotStyle | None = None,
+    figure_options: dict | None = None,
+    task_configs: dict | None = None,
+):
+    """High-level entry point for generating the final paper plots.
+
+    This wrapper keeps the plotting surface clean and allows per-figure
+    overrides so you can quickly fine-tune font sizes, axis ratios, or
+    legend visibility before exporting slides.
+
+    Parameters
+    ----------
+    qe_data, bsm_data, ad_data : DataFrame or None
+        Provide the pre-loaded data for each task. Any task set to
+        ``None`` is skipped so you can iteratively build a figure set.
+    include_legends : bool
+        Global toggle for legends. Per-figure overrides via
+        ``figure_options`` take precedence. Defaults to ``False`` so the
+        exported figures are presentation-ready and uncluttered.
+    style : PlotStyle | None
+        Baseline style applied to every figure. You can override any
+        ``PlotStyle`` field (font sizes, scaling, etc.) per figure by
+        supplying a mapping under ``figure_options``.
+    figure_options : dict | None
+        Optional mapping keyed by ``"qe"``, ``"bsm"``, or ``"ad"``.
+        Each entry may include any keyword accepted by the respective
+        plotting helper (e.g., ``fig_scale``, ``fig_aspect``,
+        ``bar_train_size``) plus a ``style`` override.
+    """
+
+    figure_options = figure_options or {}
+    task_configs = task_configs or {}
+    results = {}
+
+    if qe_data is not None:
+        opts = figure_options.get("qe", {})
+        results["qe"] = plot_qe_results(
+            qe_data,
+            output_root=opts.get("output_root", output_root),
+            file_format=opts.get("file_format", file_format),
+            dpi=opts.get("dpi", dpi),
+            save_individual_axes=opts.get("save_individual_axes", True),
+            with_legend=opts.get("with_legend", include_legends),
+            style=_resolve_style(style, opts.get("style")),
+            fig_scale=opts.get("fig_scale"),
+            fig_aspect=opts.get("fig_aspect"),
+            bar_train_size=opts.get("bar_train_size"),
+            config=task_configs.get("qe"),
+        )
+
+    if bsm_data is not None:
+        opts = figure_options.get("bsm", {})
+        results["bsm"] = plot_bsm_results(
+            bsm_data,
+            output_root=opts.get("output_root", output_root),
+            file_format=opts.get("file_format", file_format),
+            dpi=opts.get("dpi", dpi),
+            save_individual_axes=opts.get("save_individual_axes", True),
+            with_legend=opts.get("with_legend", include_legends),
+            style=_resolve_style(style, opts.get("style")),
+            fig_scale=opts.get("fig_scale"),
+            fig_aspect=opts.get("fig_aspect"),
+            bar_train_size=opts.get("bar_train_size"),
+            config=task_configs.get("bsm"),
+        )
+
+    if ad_data is not None:
+        opts = figure_options.get("ad", {})
+        results["ad"] = plot_ad_results(
+            ad_data,
+            output_root=opts.get("output_root", output_root),
+            file_format=opts.get("file_format", file_format),
+            dpi=opts.get("dpi", dpi),
+            style=_resolve_style(style, opts.get("style")),
+            fig_scale=opts.get("fig_scale"),
+            fig_aspect=opts.get("fig_aspect"),
+            config=task_configs.get("ad"),
+        )
+
+    return results
 
 
 if __name__ == '__main__':
