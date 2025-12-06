@@ -7,6 +7,7 @@ import numpy as np
 from plot_styles.style import MODEL_COLORS, MODEL_PRETTY, HEAD_LINESTYLES
 import os
 from matplotlib.transforms import blended_transform_factory
+from plot_styles.core.theme import PlotStyle, scaled_fig_size, use_style
 
 
 def smooth_curve(y, window=31, poly=3):
@@ -38,22 +39,27 @@ def sic_plot(
         y_min=None,
         x_indicator=None,
         fig_size=(20, 6),
+        fig_scale: float = 1.0,
+        fig_aspect: float | None = None,
         plot_dir=None,
         f_name=None,
         with_legend: bool = True,
         save_individual_axes: bool = False,
         file_format: str = "pdf",
         dpi: int | None = None,
+        style: PlotStyle | None = None,
 ):
     # ============================================================
     # FIGURE with 1:1:1
     # ============================================================
-    fig = plt.figure(figsize=fig_size)
-    gs = GridSpec(1, 3, width_ratios=[1, 1, 1])
+    with use_style(style):
+        resolved_size = scaled_fig_size(fig_size, scale=fig_scale, aspect_ratio=fig_aspect)
+        fig = plt.figure(figsize=resolved_size)
+        gs = GridSpec(1, 3, width_ratios=[1, 1, 1])
 
-    ax_curve = fig.add_subplot(gs[0])
-    ax_bar = fig.add_subplot(gs[1])
-    ax_scatter = fig.add_subplot(gs[2])
+        ax_curve = fig.add_subplot(gs[0])
+        ax_bar = fig.add_subplot(gs[1])
+        ax_scatter = fig.add_subplot(gs[2])
 
     grouped_val = defaultdict(lambda: defaultdict(lambda: defaultdict(float)))  # head → model → max SIC
     grouped_err = defaultdict(lambda: defaultdict(lambda: defaultdict(float)))  # head → model → max SIC uncertainty
@@ -84,7 +90,7 @@ def sic_plot(
                     SIC_smooth,
                     color=MODEL_COLORS[model],
                     linestyle=HEAD_LINESTYLES.get(row['head'], '-'),
-                    linewidth=2
+                    linewidth=2 * (style.object_scale if style else 1.0)
                 )
 
                 if row['head'] == "Cls":
@@ -147,11 +153,11 @@ def sic_plot(
             for x, y, mk in zip(xs, ys, markers):
                 ax_scatter.scatter(
                     x, y,
-                    s=140,
+                    s=140 * (style.object_scale if style else 1.0),
                     marker=mk,
                     color=MODEL_COLORS[model],
                     edgecolor="black",
-                    linewidth=0.7,
+                    linewidth=0.7 * (style.object_scale if style else 1.0),
                     alpha=0.75,
                 )
 
@@ -167,7 +173,7 @@ def sic_plot(
             color=MODEL_COLORS.get(model),
             edgecolor="black",
             alpha=0.9,
-            linewidth=0.8,
+            linewidth=0.8 * (style.object_scale if style else 1.0),
             yerr=yerrb,
             capsize=4,
             label=model
@@ -179,20 +185,20 @@ def sic_plot(
     ax_curve.set_xlabel("Signal efficiency")
     ax_curve.set_ylabel(r"SIC = $\epsilon_{\rm sig} / \sqrt{\epsilon_{\rm bkg}}$")
     ax_curve.grid(True, linestyle="--", alpha=0.5)
-    apply_nature_axis_style(ax_curve)
+    apply_nature_axis_style(ax_curve, style=style)
 
     ax_bar.set_xticks(indices)
     ax_bar.set_xticklabels(head_order)
     ax_bar.set_ylabel("Max SIC")
     ax_bar.grid(True, axis="y", linestyle="--", alpha=0.5)
-    apply_nature_axis_style(ax_bar)
+    apply_nature_axis_style(ax_bar, style=style)
 
     ax_scatter.set_xscale("log")
     ax_scatter.set_xlabel("Dataset Size")
     ax_scatter.grid(True, linestyle="--", linewidth=0.5, alpha=0.7)
     # ax_scatter.set_yscale("log")
     ax_scatter.set_ylabel("Max SIC")
-    apply_nature_axis_style(ax_scatter)
+    apply_nature_axis_style(ax_scatter, style=style)
 
     if y_min is not None:
         if isinstance(y_min, list) or len(y_min) == 3:
@@ -261,6 +267,7 @@ def sic_plot(
             head_order=head_order,
             head_linestyles=HEAD_LINESTYLES,
             legends=["dataset", "heads", "models"],
+            style=style,
         )
 
     plt.tight_layout(rect=(0, 0, 1, 0.93))
