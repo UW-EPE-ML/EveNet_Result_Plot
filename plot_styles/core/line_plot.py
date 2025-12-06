@@ -49,7 +49,6 @@ def plot_models_line(
     y_unc_col: Optional[str] = None,
     line_kwargs: Optional[dict] = None,
     scatter_kwargs: Optional[dict] = None,
-    size_scale: float = 1.0,
 ):
     """Draw model trajectories (line + scatter) on a provided axis.
 
@@ -65,10 +64,6 @@ def plot_models_line(
     active_models = []
     line_cfg = {**DEFAULT_LINE_KWARGS, **(line_kwargs or {})}
     scatter_cfg = {**DEFAULT_SCATTER_KWARGS, **(scatter_kwargs or {})}
-    if size_scale != 1.0:
-        line_cfg["linewidth"] = line_cfg.get("linewidth", 2) * size_scale
-        scatter_cfg["s"] = scatter_cfg.get("s", 140) * size_scale
-        scatter_cfg["linewidth"] = scatter_cfg.get("linewidth", 0.7) * size_scale
 
     train_size_set = set(train_sizes)
     heads_to_plot = _select_heads(df, head_order, head_filter)
