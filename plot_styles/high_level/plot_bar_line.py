@@ -137,6 +137,7 @@ def plot_metric_scatter(
         model_order=model_order,
         train_sizes=train_sizes,
         dataset_markers=dataset_markers,
+        dataset_pretty=dataset_pretty,
         head_order=head_order,
         size_scale=style.object_scale if style else 1.0,
     )
