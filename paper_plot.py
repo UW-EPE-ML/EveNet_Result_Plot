@@ -432,13 +432,13 @@ def plot_ad_results(data):
 
 
 if __name__ == '__main__':
-    qe_data = read_qe_data('data/QE_results_table.csv')
-    plot_qe_results(qe_data)
+    # qe_data = read_qe_data('data/QE_results_table.csv')
+    # plot_qe_results(qe_data)
 
     bsm_data = read_bsm_data('data/BSM')
     plot_bsm_results(bsm_data)
 
-    ad_data = read_ad_data("data/AD")
-    plot_ad_results(ad_data)
+    # ad_data = read_ad_data("data/AD")
+    # plot_ad_results(ad_data)
 
     pass
