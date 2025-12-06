@@ -42,8 +42,6 @@ def sic_plot(
         f_name=None,
         with_legend: bool = True,
         save_individual_axes: bool = False,
-        file_format: str = "pdf",
-        dpi: int | None = None,
 ):
     # ============================================================
     # FIGURE with 1:1:1
@@ -218,31 +216,21 @@ def sic_plot(
             ha="right",
         )
 
-    def _with_ext(name: str) -> str:
-        root, ext = os.path.splitext(name)
-        return name if ext else f"{root}.{file_format}"
-
-    bitmap_formats = {"png", "jpg", "jpeg", "tiff", "bmp"}
-    save_kwargs = {"dpi": dpi} if file_format.lower() in bitmap_formats else {}
-
     if save_individual_axes:
         save_axis(
             ax_curve,
             plot_dir,
-            f_name=_with_ext("sic_curve"),
-            dpi=dpi,
+            f_name=f"sic_curve.pdf"
         )
         save_axis(
             ax_bar,
             plot_dir,
-            f_name=_with_ext("sic_bar"),
-            dpi=dpi,
+            f_name=f"sic_bar.pdf"
         )
         save_axis(
             ax_scatter,
             plot_dir,
-            f_name=_with_ext("sic_scatter"),
-            dpi=dpi,
+            f_name=f"sic_scatter.pdf"
         )
 
     active_models = list(set(active_models))
@@ -258,7 +246,7 @@ def sic_plot(
     if f_name is not None:
         # ---- SAVE HERE ----
         os.makedirs(plot_dir, exist_ok=True)
-        plot_des = os.path.join(plot_dir, _with_ext(f_name))
-        fig.savefig(str(plot_des), bbox_inches="tight", **save_kwargs)
+        plot_des = os.path.join(plot_dir, f_name)
+        fig.savefig(str(plot_des), bbox_inches="tight")
         print(f"Saved figure → {plot_des}")
     return fig

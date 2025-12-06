@@ -33,8 +33,6 @@ def plot_ad_sig_summary(
         f_name=None,
         plot_dir="./",
         with_legend: bool = True,
-        dpi: int | None = None,
-        file_format: str | None = None,
 ):
     # Which models appear?
     detected = sorted(df["model"].unique())
@@ -159,19 +157,11 @@ def plot_ad_sig_summary(
     )
 
     plt.tight_layout(rect=(0.0, 0.0, 1.0, 0.95))
-    def _with_ext(name: str) -> str:
-        root, ext = os.path.splitext(name)
-        if ext:
-            return name
-        if file_format:
-            return f"{root}.{file_format}"
-        return f"{root}.pdf"
-
     if f_name is not None:
         # ---- SAVE HERE ----
         os.makedirs(plot_dir, exist_ok=True)
-        plot_des = os.path.join(plot_dir, _with_ext(f_name))
-        fig.savefig(plot_des, bbox_inches="tight", dpi=dpi)
+        plot_des = os.path.join(plot_dir, f_name)
+        fig.savefig(plot_des, bbox_inches="tight")
         print(f"Saved figure → {plot_des}")
 
 
@@ -189,8 +179,6 @@ def plot_ad_gen_summary(
         plot_dir="./",
         with_legend: bool = True,
         save_individual_axes: bool = False,
-        dpi: int | None = None,
-        file_format: str | None = None,
 ):
     """
     Two-panel Nature-style bar plot for after-cut metrics.
@@ -315,26 +303,16 @@ def plot_ad_gen_summary(
     # Right panel
     plot_panel(axes[1], right_data, label_right, y_min=y_min_right, percentage=True)
 
-    def _with_ext(name: str) -> str:
-        root, ext = os.path.splitext(name)
-        if ext:
-            return name
-        if file_format:
-            return f"{root}.{file_format}"
-        return f"{root}.pdf"
-
     if save_individual_axes:
         save_axis(
             axes[0],
             plot_dir,
-            f_name=_with_ext(f"ad_gen_{metric_left}"),
-            dpi=dpi,
+            f_name=f"ad_gen_{metric_left}.pdf"
         )
         save_axis(
             axes[1],
             plot_dir,
-            f_name=_with_ext(f"ad_gen_{metric_right}"),
-            dpi=dpi,
+            f_name=f"ad_gen_{metric_right}.pdf"
         )
 
     # -------------------------------------------------------
@@ -351,6 +329,6 @@ def plot_ad_gen_summary(
     if f_name is not None:
         # ---- SAVE HERE ----
         os.makedirs(plot_dir, exist_ok=True)
-        plot_des = os.path.join(plot_dir, _with_ext(f_name))
-        fig.savefig(plot_des, bbox_inches="tight", dpi=dpi)
+        plot_des = os.path.join(plot_dir, f_name)
+        fig.savefig(plot_des, bbox_inches="tight")
         print(f"Saved figure → {plot_des}")
