@@ -97,4 +97,18 @@ Below is the single integrated table you can drop into your Supplementary Method
 |                     | Rare Higgs decay (formerly “BSM”)   | rare Higgs-boson decay benchmark (H→2a→4b)                  | **RH** or **H→2a→4b**               |
 |                     | Anomaly detection                   | dimuon anomaly-detection benchmark using real data          | **AD**                              |
 
+## 🔗 Plot gallery website
+
+This repository now includes a small static gallery that renders the paper plots into PNGs and publishes them to GitHub Pages. The CI workflow builds the gallery on every push to `main`.
+
+### Local preview
+
+```bash
+python -m pip install -r requirements.txt
+python website/build_gallery.py --output-dir site --format png --dpi 200
+python -m http.server --directory site 8000
+```
+
+Open http://localhost:8000 to browse the same gallery that will appear on GitHub Pages.
+
 
