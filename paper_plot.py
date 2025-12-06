@@ -284,12 +284,19 @@ def plot_qe_results(
         bar_train_size: int | None = None,
         config: dict | None = None,
 ):
+    """Plot QE figures with optional per-figure font overrides.
+
+    Each plot-specific config (``loss``, ``pair_scatter``, ``pair_bar``,
+    ``delta_scatter``, ``delta_bar``) may include a ``style`` entry that
+    overrides the base :class:`PlotStyle` so you can tune font sizes or
+    scaling for individual figures without affecting the others.
+    """
     from plot_styles.style import QE_DATASET_MARKERS, QE_DATASET_PRETTY
 
     cfg = _merge_configs(DEFAULT_QE_CONFIG, config)
 
     plot_dir = os.path.join(output_root, "QE")
-    scale = fig_scale if fig_scale is not None else (style.figure_scale if style else 1.0)
+    base_scale = fig_scale if fig_scale is not None else (style.figure_scale if style else 1.0)
 
     os.makedirs(plot_dir, exist_ok=True)
 
@@ -299,6 +306,9 @@ def plot_qe_results(
     loss_outputs = {}
     for head in head_iter:
         head_df = data[data["head"] == head] if head is not None and "head" in data else data
+        loss_style = _resolve_style(style, cfg["loss"].get("style"))
+        loss_scale = fig_scale if fig_scale is not None else (loss_style.figure_scale if loss_style else base_scale)
+
         fig, axes, active_models = plot_loss(
             head_df,
             train_sizes=cfg["train_sizes"],
@@ -306,8 +316,8 @@ def plot_qe_results(
             dataset_markers=QE_DATASET_MARKERS,
             dataset_pretty=QE_DATASET_PRETTY,
             **cfg["loss"],
-            style=style,
-            fig_scale=scale,
+            style=loss_style,
+            fig_scale=loss_scale,
             fig_aspect=fig_aspect,
         )
 
@@ -322,7 +332,7 @@ def plot_qe_results(
                 head_order=[head] if head is not None else None,
                 head_linestyles=HEAD_LINESTYLES,
                 **cfg.get("legend", {}),
-                style=style,
+                style=loss_style,
             )
 
         fig.savefig(
@@ -338,6 +348,8 @@ def plot_qe_results(
 
     pair_bar_size = bar_train_size or max(cfg["train_sizes"])
     pair_scatter_cfg = cfg["pair_scatter"]
+    pair_scatter_style = _resolve_style(style, pair_scatter_cfg.get("style"))
+    pair_scatter_scale = fig_scale if fig_scale is not None else (pair_scatter_style.figure_scale if pair_scatter_style else base_scale)
     fig_pair_scatter, ax_pair_scatter, active_pair = plot_metric_scatter(
         data,
         metric=pair_scatter_cfg.get("metric", "pairing"),
@@ -347,9 +359,9 @@ def plot_qe_results(
         dataset_pretty=QE_DATASET_PRETTY,
         head_order=qe_heads if qe_heads else None,
         **{k: v for k, v in pair_scatter_cfg.items() if k not in {"metric"}},
-        fig_scale=scale,
+        fig_scale=pair_scatter_scale,
         fig_aspect=fig_aspect,
-        style=style,
+        style=pair_scatter_style,
     )
     if with_legend:
         plot_legend(
@@ -362,7 +374,7 @@ def plot_qe_results(
             head_order=qe_heads if qe_heads else None,
             head_linestyles=HEAD_LINESTYLES,
             **cfg.get("legend", {}),
-            style=style,
+            style=pair_scatter_style,
         )
     fig_pair_scatter.savefig(
         os.path.join(plot_dir, _with_ext("pair_scatter", file_format)),
@@ -370,6 +382,8 @@ def plot_qe_results(
         **_save_kwargs(file_format, dpi),
     )
 
+    pair_bar_style = _resolve_style(style, cfg["pair_bar"].get("style"))
+    pair_bar_scale = fig_scale if fig_scale is not None else (pair_bar_style.figure_scale if pair_bar_style else base_scale)
     fig_pair_bar, ax_pair_bar, _ = plot_metric_bar(
         data,
         metric=cfg["pair_bar"].get("metric", "pairing"),
@@ -377,9 +391,9 @@ def plot_qe_results(
         head_order=qe_heads if qe_heads else [None],
         train_size_for_bar=pair_bar_size,
         **{k: v for k, v in cfg["pair_bar"].items() if k not in {"metric"}},
-        fig_scale=scale,
+        fig_scale=pair_bar_scale,
         fig_aspect=fig_aspect,
-        style=style,
+        style=pair_bar_style,
     )
     fig_pair_bar.savefig(
         os.path.join(plot_dir, _with_ext("pair_bar", file_format)),
@@ -388,6 +402,8 @@ def plot_qe_results(
     )
 
     delta_scatter_cfg = cfg["delta_scatter"]
+    delta_scatter_style = _resolve_style(style, delta_scatter_cfg.get("style"))
+    delta_scatter_scale = fig_scale if fig_scale is not None else (delta_scatter_style.figure_scale if delta_scatter_style else base_scale)
     fig_delta_scatter, ax_delta_scatter, active_delta = plot_metric_scatter(
         data,
         metric=delta_scatter_cfg.get("metric", "deltaD"),
@@ -397,9 +413,9 @@ def plot_qe_results(
         dataset_pretty=QE_DATASET_PRETTY,
         head_order=qe_heads if qe_heads else None,
         **{k: v for k, v in delta_scatter_cfg.items() if k not in {"metric"}},
-        fig_scale=scale,
+        fig_scale=delta_scatter_scale,
         fig_aspect=fig_aspect,
-        style=style,
+        style=delta_scatter_style,
     )
     if with_legend:
         plot_legend(
@@ -412,7 +428,7 @@ def plot_qe_results(
             head_order=qe_heads if qe_heads else None,
             head_linestyles=HEAD_LINESTYLES,
             **cfg.get("legend", {}),
-            style=style,
+            style=delta_scatter_style,
         )
     fig_delta_scatter.savefig(
         os.path.join(plot_dir, _with_ext("deltaD_scatter", file_format)),
@@ -420,6 +436,8 @@ def plot_qe_results(
         **_save_kwargs(file_format, dpi),
     )
 
+    delta_bar_style = _resolve_style(style, cfg["delta_bar"].get("style"))
+    delta_bar_scale = fig_scale if fig_scale is not None else (delta_bar_style.figure_scale if delta_bar_style else base_scale)
     fig_delta_bar, ax_delta_bar, _ = plot_metric_bar(
         data,
         metric=cfg["delta_bar"].get("metric", "deltaD"),
@@ -427,9 +445,9 @@ def plot_qe_results(
         head_order=qe_heads if qe_heads else [None],
         train_size_for_bar=pair_bar_size,
         **{k: v for k, v in cfg["delta_bar"].items() if k not in {"metric"}},
-        fig_scale=scale,
+        fig_scale=delta_bar_scale,
         fig_aspect=fig_aspect,
-        style=style,
+        style=delta_bar_style,
     )
     fig_delta_bar.savefig(
         os.path.join(plot_dir, _with_ext("deltaD_bar", file_format)),
@@ -625,12 +643,18 @@ def plot_bsm_results(
         bar_train_size: int | None = None,
         config: dict | None = None,
 ):
+    """Plot BSM figures with optional per-figure font overrides.
+
+    Each plot config (``loss``, ``pair_scatter``, ``pair_bar``, ``sic``)
+    accepts a ``style`` entry to override the base :class:`PlotStyle` for
+    that specific figure, enabling fine-grained font and scaling control.
+    """
     from plot_styles.style import BSM_DATASET_MARKERS, BSM_DATASET_PRETTY
 
     cfg = _merge_configs(DEFAULT_BSM_CONFIG, config)
 
     plot_dir = os.path.join(output_root, "BSM")
-    scale = fig_scale if fig_scale is not None else (style.figure_scale if style else 1.0)
+    base_scale = fig_scale if fig_scale is not None else (style.figure_scale if style else 1.0)
 
     os.makedirs(plot_dir, exist_ok=True)
 
@@ -641,6 +665,9 @@ def plot_bsm_results(
     for head in head_iter:
         head_df = data[(data["mass_a"] == "30") & (data["head"] == head)] if head is not None else data[
             data["mass_a"] == "30"]
+        loss_style = _resolve_style(style, cfg["loss"].get("style"))
+        loss_scale = fig_scale if fig_scale is not None else (loss_style.figure_scale if loss_style else base_scale)
+
         fig, axes, active_models = plot_loss(
             head_df,
             train_sizes=cfg["train_sizes"],
@@ -648,8 +675,8 @@ def plot_bsm_results(
             dataset_markers=BSM_DATASET_MARKERS,
             dataset_pretty=BSM_DATASET_PRETTY,
             **cfg["loss"],
-            style=style,
-            fig_scale=scale,
+            style=loss_style,
+            fig_scale=loss_scale,
             fig_aspect=fig_aspect,
         )
         if with_legend:
@@ -663,7 +690,7 @@ def plot_bsm_results(
                 head_order=[head] if head is not None else None,
                 head_linestyles=HEAD_LINESTYLES,
                 **cfg.get("legend", {}),
-                style=style,
+                style=loss_style,
             )
         fig.savefig(
             os.path.join(plot_dir, _with_ext(f"loss_{head if head is not None else 'overall'}", file_format)),
@@ -678,6 +705,8 @@ def plot_bsm_results(
 
     pair_bar_size = bar_train_size or cfg["typical_dataset_size"]
     pair_scatter_cfg = cfg["pair_scatter"]
+    pair_scatter_style = _resolve_style(style, pair_scatter_cfg.get("style"))
+    pair_scatter_scale = fig_scale if fig_scale is not None else (pair_scatter_style.figure_scale if pair_scatter_style else base_scale)
     fig_pair_scatter, ax_pair_scatter, active_pair = plot_metric_scatter(
         data[data["mass_a"] == "30"],
         metric=pair_scatter_cfg.get("metric", "pairing"),
@@ -687,9 +716,9 @@ def plot_bsm_results(
         dataset_pretty=BSM_DATASET_PRETTY,
         head_order=bsm_heads if bsm_heads else None,
         **{k: v for k, v in pair_scatter_cfg.items() if k not in {"metric"}},
-        fig_scale=scale,
+        fig_scale=pair_scatter_scale,
         fig_aspect=fig_aspect,
-        style=style,
+        style=pair_scatter_style,
     )
     if with_legend:
         plot_legend(
@@ -702,7 +731,7 @@ def plot_bsm_results(
             head_order=bsm_heads if bsm_heads else None,
             head_linestyles=HEAD_LINESTYLES,
             **cfg.get("legend", {}),
-            style=style,
+            style=pair_scatter_style,
         )
     fig_pair_scatter.savefig(
         os.path.join(plot_dir, _with_ext("pair_scatter", file_format)),
@@ -710,6 +739,8 @@ def plot_bsm_results(
         **_save_kwargs(file_format, dpi),
     )
 
+    pair_bar_style = _resolve_style(style, cfg["pair_bar"].get("style"))
+    pair_bar_scale = fig_scale if fig_scale is not None else (pair_bar_style.figure_scale if pair_bar_style else base_scale)
     fig_pair_bar, ax_pair_bar, _ = plot_metric_bar(
         data[data["mass_a"] == "30"],
         metric=cfg["pair_bar"].get("metric", "pairing"),
@@ -717,9 +748,9 @@ def plot_bsm_results(
         head_order=bsm_heads if bsm_heads else [None],
         train_size_for_bar=pair_bar_size,
         **{k: v for k, v in cfg["pair_bar"].items() if k not in {"metric"}},
-        fig_scale=scale,
+        fig_scale=pair_bar_scale,
         fig_aspect=fig_aspect,
-        style=style,
+        style=pair_bar_style,
     )
     fig_pair_bar.savefig(
         os.path.join(plot_dir, _with_ext("pair_bar", file_format)),
@@ -728,6 +759,8 @@ def plot_bsm_results(
     )
 
     sic_cfg = cfg["sic"]
+    sic_style = _resolve_style(style, sic_cfg.get("style"))
+    sic_scale = fig_scale if fig_scale is not None else (sic_style.figure_scale if sic_style else base_scale)
     sic_figs, active_sic = sic_plot_individual(
         data[data["mass_a"] == "30"],
         model_order=cfg["models"],
@@ -738,9 +771,9 @@ def plot_bsm_results(
         x_indicator=sic_cfg.get("x_indicator", cfg["typical_dataset_size"]),
         x_indicator_text_config=sic_cfg.get("x_indicator_text_config", None),
         y_min=sic_cfg.get("y_min", [0, 0, 0.85]),
-        fig_scale=scale,
+        fig_scale=sic_scale,
         fig_aspect=fig_aspect,
-        style=style,
+        style=sic_style,
     )
     for name, (fig_sic, _) in sic_figs.items():
         fig_sic.savefig(
@@ -992,11 +1025,19 @@ def plot_ad_results(
         fig_aspect: float | None = None,
         config: dict | None = None,
 ):
+    """Plot AD figures with optional per-figure font overrides.
+
+    Both ``sig`` and ``gen`` configs may provide a ``style`` entry to
+    override the base :class:`PlotStyle` for fine-grained control over
+    fonts or scaling in each plot.
+    """
     cfg = _merge_configs(DEFAULT_AD_CONFIG, config)
 
     plot_dir = os.path.join(output_root, "AD")
-    scale = fig_scale if fig_scale is not None else (style.figure_scale if style else 1.0)
+    base_scale = fig_scale if fig_scale is not None else (style.figure_scale if style else 1.0)
 
+    sig_style = _resolve_style(style, cfg["sig"].get("style"))
+    sig_scale = fig_scale if fig_scale is not None else (sig_style.figure_scale if sig_style else base_scale)
     plot_ad_sig_summary(
         data['sig'],
         models_order=cfg["models"],
@@ -1008,11 +1049,13 @@ def plot_ad_results(
         dpi=dpi,
         file_format=file_format,
         y_ref=cfg["sig"].get("y_ref", 6.4),
-        style=style,
-        fig_scale=scale,
+        style=sig_style,
+        fig_scale=sig_scale,
         fig_aspect=fig_aspect,
     )
 
+    gen_style = _resolve_style(style, cfg["gen"].get("style"))
+    gen_scale = fig_scale if fig_scale is not None else (gen_style.figure_scale if gen_style else base_scale)
     plot_ad_gen_summary(
         data['gen'],
         models_order=cfg["models"],
@@ -1024,8 +1067,8 @@ def plot_ad_results(
         save_individual_axes=cfg["gen"].get("save_individual_axes", save_individual_axes),
         dpi=dpi,
         file_format=file_format,
-        style=style,
-        fig_scale=scale,
+        style=gen_style,
+        fig_scale=gen_scale,
         fig_aspect=fig_aspect,
     )
 
