@@ -9,7 +9,7 @@ from plot_styles.high_level.plot_loss import plot_loss
 from plot_styles.high_level.plot_bar_line import plot_bar_line
 from plot_styles.sic import sic_plot
 from plot_styles.ad_bar import plot_ad_sig_summary, plot_ad_gen_summary
-from plot_styles.core.legend import plot_legend, plot_only_legend
+from plot_styles.core.legend import plot_legend
 from plot_styles.core.style_axis import save_axis
 from plot_styles.style import MODEL_COLORS, HEAD_LINESTYLES
 
@@ -26,39 +26,6 @@ def _save_kwargs(file_format: str, dpi: int | None):
     if file_format.lower() in BITMAP_FORMATS and dpi is not None:
         return {"dpi": dpi}
     return {}
-
-
-def plot_task_legend(
-    *,
-    plot_dir: str,
-    model_order,
-    train_sizes,
-    dataset_markers,
-    dataset_pretty,
-    head_order=None,
-    legends=None,
-    file_format: str = "pdf",
-    dpi: int | None = None,
-    f_name: str = "legend",
-):
-    """Render a standalone legend shared by a task's plots."""
-
-    fig = plot_only_legend(
-        fig_size=(7.5, 2.5),
-        active_models=model_order,
-        train_sizes=train_sizes,
-        dataset_markers=dataset_markers,
-        dataset_pretty=dataset_pretty,
-        model_colors=MODEL_COLORS,
-        head_order=head_order,
-        head_linestyles=HEAD_LINESTYLES,
-        legends=legends,
-    )
-
-    os.makedirs(plot_dir, exist_ok=True)
-    legend_path = os.path.join(plot_dir, _with_ext(f_name, file_format))
-    fig.savefig(legend_path, bbox_inches="tight", **_save_kwargs(file_format, dpi))
-    return legend_path
 
 
 def convert_epochs_to_steps(epoch, train_size, batch_size_per_GPU=1024, GPUs=16):
@@ -91,7 +58,6 @@ def plot_qe_results(
     file_format: str = "pdf",
     dpi: int | None = None,
     save_individual_axes: bool = True,
-    with_legend: bool = True,
 ):
     from plot_styles.style import QE_DATASET_MARKERS, QE_DATASET_PRETTY
 
@@ -113,16 +79,15 @@ def plot_qe_results(
         grid=True,
     )
 
-    if with_legend:
-        plot_legend(
-            fig,
-            active_models=active_models,
-            train_sizes=QE_TRAIN_SIZE,
-            dataset_markers=QE_DATASET_MARKERS,
-            dataset_pretty=QE_DATASET_PRETTY,
-            model_colors=MODEL_COLORS,
-            legends=["dataset", "models"],
-        )
+    plot_legend(
+        fig,
+        active_models=active_models,
+        train_sizes=QE_TRAIN_SIZE,
+        dataset_markers=QE_DATASET_MARKERS,
+        dataset_pretty=QE_DATASET_PRETTY,
+        model_colors=MODEL_COLORS,
+        legends=["dataset", "models"],
+    )
     os.makedirs(plot_dir, exist_ok=True)
     fig.savefig(os.path.join(plot_dir, _with_ext("loss", file_format)), bbox_inches="tight", **_save_kwargs(file_format, dpi))
     if save_individual_axes:
@@ -143,16 +108,15 @@ def plot_qe_results(
         panel_ratio=(2, 2),  # << tunable left:right panel ratio
         x_indicator=1e3,  # << typical dataset size indicator
     )
-    if with_legend:
-        plot_legend(
-            fig_pair,
-            active_models=active_pair,
-            train_sizes=QE_TRAIN_SIZE,
-            dataset_markers=QE_DATASET_MARKERS,
-            dataset_pretty=QE_DATASET_PRETTY,
-            model_colors=MODEL_COLORS,
-            legends=["dataset", "models"],
-        )
+    plot_legend(
+        fig_pair,
+        active_models=active_pair,
+        train_sizes=QE_TRAIN_SIZE,
+        dataset_markers=QE_DATASET_MARKERS,
+        dataset_pretty=QE_DATASET_PRETTY,
+        model_colors=MODEL_COLORS,
+        legends=["dataset", "models"],
+    )
     fig_pair.savefig(os.path.join(plot_dir, _with_ext("pair", file_format)), bbox_inches="tight", **_save_kwargs(file_format, dpi))
     if save_individual_axes:
         for idx, axis in enumerate(axes_pair):
@@ -173,26 +137,19 @@ def plot_qe_results(
         logy=False,
         logx=True,
     )
-    if with_legend:
-        plot_legend(
-            fig_delta,
-            active_models=active_delta,
-            train_sizes=QE_TRAIN_SIZE,
-            dataset_markers=QE_DATASET_MARKERS,
-            dataset_pretty=QE_DATASET_PRETTY,
-            model_colors=MODEL_COLORS,
-            legends=["dataset", "models"],
-        )
+    plot_legend(
+        fig_delta,
+        active_models=active_delta,
+        train_sizes=QE_TRAIN_SIZE,
+        dataset_markers=QE_DATASET_MARKERS,
+        dataset_pretty=QE_DATASET_PRETTY,
+        model_colors=MODEL_COLORS,
+        legends=["dataset", "models"],
+    )
     fig_delta.savefig(os.path.join(plot_dir, _with_ext("deltaD", file_format)), bbox_inches="tight", **_save_kwargs(file_format, dpi))
     if save_individual_axes:
         for idx, axis in enumerate(axes_delta):
             save_axis(axis, plot_dir, f_name=_with_ext(f"deltaD_panel_{idx + 1}", file_format), dpi=dpi)
-
-    return {
-        "loss": {"fig": fig, "axes": axes, "active_models": active_models},
-        "pair": {"fig": fig_pair, "axes": axes_pair, "active_models": active_pair},
-        "delta": {"fig": fig_delta, "axes": axes_delta, "active_models": active_delta},
-    }
 
 
 def read_bsm_data(folder_path):
@@ -363,7 +320,6 @@ def plot_bsm_results(
     file_format: str = "pdf",
     dpi: int | None = None,
     save_individual_axes: bool = True,
-    with_legend: bool = True,
 ):
     from plot_styles.style import BSM_DATASET_MARKERS, BSM_DATASET_PRETTY
 
@@ -396,18 +352,17 @@ def plot_bsm_results(
         },
         grid=True,
     )
-    if with_legend:
-        plot_legend(
-            fig,
-            active_models=active_models,
-            train_sizes=BSM_TRAIN_SIZE,
-            dataset_markers=BSM_DATASET_MARKERS,
-            dataset_pretty=BSM_DATASET_PRETTY,
-            model_colors=MODEL_COLORS,
-            head_order=BSM_HEAD,
-            head_linestyles=HEAD_LINESTYLES,
-            legends=["dataset", "heads", "models"],
-        )
+    plot_legend(
+        fig,
+        active_models=active_models,
+        train_sizes=BSM_TRAIN_SIZE,
+        dataset_markers=BSM_DATASET_MARKERS,
+        dataset_pretty=BSM_DATASET_PRETTY,
+        model_colors=MODEL_COLORS,
+        head_order=BSM_HEAD,
+        head_linestyles=HEAD_LINESTYLES,
+        legends=["dataset", "heads", "models"],
+    )
     os.makedirs(plot_dir, exist_ok=True)
     fig.savefig(os.path.join(plot_dir, _with_ext("loss", file_format)), bbox_inches="tight", **_save_kwargs(file_format, dpi))
     if save_individual_axes:
@@ -429,24 +384,23 @@ def plot_bsm_results(
         panel_ratio=(2, 2),  # << tunable left:right panel ratio
         x_indicator=BSM_TYPICAL_DATASET_SIZE,  # << typical dataset size indicator
     )
-    if with_legend:
-        plot_legend(
-            fig_pair,
-            active_models=active_pair,
-            train_sizes=BSM_TRAIN_SIZE,
-            dataset_markers=BSM_DATASET_MARKERS,
-            dataset_pretty=BSM_DATASET_PRETTY,
-            model_colors=MODEL_COLORS,
-            head_order=["Cls+Asn"],
-            head_linestyles=HEAD_LINESTYLES,
-            legends=["dataset", "heads", "models"],
-        )
+    plot_legend(
+        fig_pair,
+        active_models=active_pair,
+        train_sizes=BSM_TRAIN_SIZE,
+        dataset_markers=BSM_DATASET_MARKERS,
+        dataset_pretty=BSM_DATASET_PRETTY,
+        model_colors=MODEL_COLORS,
+        head_order=["Cls+Asn"],
+        head_linestyles=HEAD_LINESTYLES,
+        legends=["dataset", "heads", "models"],
+    )
     fig_pair.savefig(os.path.join(plot_dir, _with_ext("pair", file_format)), bbox_inches="tight", **_save_kwargs(file_format, dpi))
     if save_individual_axes:
         for idx, axis in enumerate(axes_pair):
             save_axis(axis, plot_dir, f_name=_with_ext(f"pair_panel_{idx + 1}", file_format), dpi=dpi)
 
-    fig_sic, axes_sic, active_sic = sic_plot(
+    fig_sic = sic_plot(
         data[data["mass_a"] == "30"],
         model_order=BSM_MODEL,
         train_sizes=BSM_TRAIN_SIZE,
@@ -458,128 +412,15 @@ def plot_bsm_results(
         fig_size=(21, 6),
         plot_dir="plot/BSM",
         f_name=_with_ext("sic", file_format),
-        with_legend=False,
+        with_legend=True,
         save_individual_axes=save_individual_axes,
         file_format=file_format,
         dpi=dpi,
     )
-    if with_legend:
-        plot_legend(
-            fig_sic,
-            active_models=active_sic,
-            train_sizes=BSM_TRAIN_SIZE,
-            dataset_markers=BSM_DATASET_MARKERS,
-            dataset_pretty=BSM_DATASET_PRETTY,
-            model_colors=MODEL_COLORS,
-            head_order=BSM_HEAD,
-            head_linestyles=HEAD_LINESTYLES,
-            legends=["dataset", "heads", "models"],
-        )
     fig_sic.savefig(os.path.join(plot_dir, _with_ext("sic", file_format)), bbox_inches="tight", **_save_kwargs(file_format, dpi))
     if save_individual_axes:
-        for axis_name, axis in zip(["sic_curve", "sic_bar", "sic_scatter"], axes_sic):
-            save_axis(axis, plot_dir, f_name=_with_ext(axis_name, file_format), dpi=dpi)
-
-    return {
-        "loss": {"fig": fig, "axes": axes, "active_models": active_models},
-        "pair": {"fig": fig_pair, "axes": axes_pair, "active_models": active_pair},
-        "sic": {"fig": fig_sic, "axes": axes_sic, "active_models": active_sic},
-    }
-
-
-def plot_qe_results_webpage(
-    data,
-    *,
-    output_root: str = "plot",
-    file_format: str = "pdf",
-    dpi: int | None = None,
-):
-    from plot_styles.style import QE_DATASET_MARKERS, QE_DATASET_PRETTY
-
-    legend_cfg = {
-        "models": ["Nominal", "Scratch", "SSL", "Ref."],
-        "heads": ["Cls", "Cls+Asn"],
-        "train_sizes": [15, 148, 1475, 2950],
-    }
-
-    plot_dir = os.path.join(output_root, "QE")
-
-    legend_path = plot_task_legend(
-        plot_dir=plot_dir,
-        model_order=legend_cfg["models"],
-        train_sizes=legend_cfg["train_sizes"],
-        dataset_markers=QE_DATASET_MARKERS,
-        dataset_pretty=QE_DATASET_PRETTY,
-        head_order=legend_cfg["heads"],
-        legends=["dataset", "heads", "models"],
-        file_format=file_format,
-        dpi=dpi,
-    )
-
-    results = plot_qe_results(
-        data,
-        output_root=output_root,
-        file_format=file_format,
-        dpi=dpi,
-        save_individual_axes=True,
-        with_legend=False,
-    )
-
-    return {
-        "legend": legend_path,
-        "loss": [os.path.join(plot_dir, _with_ext(f"loss_line_panel_{idx + 1}", file_format)) for idx, _ in enumerate(results["loss"]["axes"])],
-        "pair": [os.path.join(plot_dir, _with_ext(f"pair_panel_{idx + 1}", file_format)) for idx, _ in enumerate(results["pair"]["axes"])],
-        "delta": [os.path.join(plot_dir, _with_ext(f"deltaD_panel_{idx + 1}", file_format)) for idx, _ in enumerate(results["delta"]["axes"])],
-    }
-
-
-def plot_bsm_results_webpage(
-    data,
-    *,
-    output_root: str = "plot",
-    file_format: str = "pdf",
-    dpi: int | None = None,
-):
-    from plot_styles.style import BSM_DATASET_MARKERS, BSM_DATASET_PRETTY
-
-    legend_cfg = {
-        "models": ["Nominal", "Scratch", "SSL", "Ref."],
-        "heads": ["Cls", "Cls+Asn"],
-        "train_sizes": [10, 30, 100, 300],
-    }
-
-    plot_dir = os.path.join(output_root, "BSM")
-
-    legend_path = plot_task_legend(
-        plot_dir=plot_dir,
-        model_order=legend_cfg["models"],
-        train_sizes=legend_cfg["train_sizes"],
-        dataset_markers=BSM_DATASET_MARKERS,
-        dataset_pretty=BSM_DATASET_PRETTY,
-        head_order=legend_cfg["heads"],
-        legends=["dataset", "heads", "models"],
-        file_format=file_format,
-        dpi=dpi,
-    )
-
-    results = plot_bsm_results(
-        data,
-        output_root=output_root,
-        file_format=file_format,
-        dpi=dpi,
-        save_individual_axes=True,
-        with_legend=False,
-    )
-
-    return {
-        "legend": legend_path,
-        "loss": [os.path.join(plot_dir, _with_ext(f"loss_line_panel_{idx + 1}", file_format)) for idx, _ in enumerate(results["loss"]["axes"])],
-        "pair": [os.path.join(plot_dir, _with_ext(f"pair_panel_{idx + 1}", file_format)) for idx, _ in enumerate(results["pair"]["axes"])],
-        "sic": [
-            os.path.join(plot_dir, _with_ext(name, file_format))
-            for name in ["sic_curve", "sic_bar", "sic_scatter"]
-        ],
-    }
+        for idx, axis in enumerate(axes_pair):
+            save_axis(axis, plot_dir, f_name=_with_ext(f"sic_panel_{idx + 1}", file_format), dpi=dpi)
 
 
 def read_ad_data(file_path):
@@ -707,30 +548,6 @@ def plot_ad_results(
     )
 
     pass
-
-
-def plot_ad_results_webpage(
-    data,
-    *,
-    output_root: str = "plot",
-    file_format: str = "pdf",
-    dpi: int | None = None,
-):
-    plot_dir = os.path.join(output_root, "AD")
-
-    plot_ad_results(
-        data,
-        output_root=output_root,
-        file_format=file_format,
-        dpi=dpi,
-        save_individual_axes=True,
-    )
-
-    return {
-        "legend": None,
-        "sig": [os.path.join(plot_dir, _with_ext("ad_significance", file_format))],
-        "gen": [os.path.join(plot_dir, _with_ext("ad_generation", file_format))],
-    }
 
 
 if __name__ == '__main__':
