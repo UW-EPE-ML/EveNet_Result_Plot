@@ -29,9 +29,9 @@ from paper_plot import (  # noqa: E402  # pylint: disable=wrong-import-position
     read_ad_data,
     read_bsm_data,
     read_qe_data,
-    plot_ad_results,
-    plot_bsm_results,
-    plot_qe_results,
+    plot_ad_results_webpage,
+    plot_bsm_results_webpage,
+    plot_qe_results_webpage,
 )
 
 
@@ -160,23 +160,33 @@ def main():
     if not args.skip_qe and Path("data/QE_results_table.csv").is_file():
         print("Rendering QC/QE plots…")
         qe_data = read_qe_data("data/QE_results_table.csv")
-        plot_qe_results(
+        qe_outputs = plot_qe_results_webpage(
             qe_data,
             output_root=str(plots_root),
             file_format=args.format,
             dpi=args.dpi,
-            save_individual_axes=False,
         )
+        qe_plots = [
+            {"src": str(Path(qe_outputs["legend"]).relative_to(output_dir)), "caption": "QC/QE legend"},
+            *[
+                {"src": str(Path(path).relative_to(output_dir)), "caption": f"QC: loss panel {i + 1}"}
+                for i, path in enumerate(qe_outputs["loss"])
+            ],
+            *[
+                {"src": str(Path(path).relative_to(output_dir)), "caption": f"QC: pairing panel {i + 1}"}
+                for i, path in enumerate(qe_outputs["pair"])
+            ],
+            *[
+                {"src": str(Path(path).relative_to(output_dir)), "caption": f"QC: DeltaD panel {i + 1}"}
+                for i, path in enumerate(qe_outputs["delta"])
+            ],
+        ]
         sections.append(
             _section(
                 "qe",
                 "Quantum-correlation benchmark (QC)",
                 "Validation loss, pairing efficiency, and DeltaD precision across training sizes.",
-                [
-                    {"src": f"plots/QE/loss.{args.format}", "caption": "QC: validation loss vs. effective steps"},
-                    {"src": f"plots/QE/pair.{args.format}", "caption": "QC: pairing efficiency across datasets"},
-                    {"src": f"plots/QE/deltaD.{args.format}", "caption": "QC: DeltaD precision vs. train size"},
-                ],
+                qe_plots,
             )
         )
     else:
@@ -185,23 +195,33 @@ def main():
     if not args.skip_bsm and Path("data/BSM").exists():
         print("Rendering BSM plots…")
         bsm_data = read_bsm_data("data/BSM")
-        plot_bsm_results(
+        bsm_outputs = plot_bsm_results_webpage(
             bsm_data,
             output_root=str(plots_root),
             file_format=args.format,
             dpi=args.dpi,
-            save_individual_axes=False,
         )
+        bsm_plots = [
+            {"src": str(Path(bsm_outputs["legend"]).relative_to(output_dir)), "caption": "BSM legend"},
+            *[
+                {"src": str(Path(path).relative_to(output_dir)), "caption": f"BSM: loss panel {i + 1}"}
+                for i, path in enumerate(bsm_outputs["loss"])
+            ],
+            *[
+                {"src": str(Path(path).relative_to(output_dir)), "caption": f"BSM: pairing panel {i + 1}"}
+                for i, path in enumerate(bsm_outputs["pair"])
+            ],
+            *[
+                {"src": str(Path(path).relative_to(output_dir)), "caption": f"BSM: SIC panel {i + 1}"}
+                for i, path in enumerate(bsm_outputs["sic"])
+            ],
+        ]
         sections.append(
             _section(
                 "bsm",
                 "Rare Higgs benchmark (H→2a→4b)",
                 "Loss curves, pairing efficiency, and SIC summary for the BSM study.",
-                [
-                    {"src": f"plots/BSM/loss.{args.format}", "caption": "BSM: validation loss per model/head"},
-                    {"src": f"plots/BSM/pair.{args.format}", "caption": "BSM: pairing efficiency by dataset size"},
-                    {"src": f"plots/BSM/sic.{args.format}", "caption": "BSM: signal significance (SIC) summary"},
-                ],
+                bsm_plots,
             )
         )
     else:
@@ -210,22 +230,28 @@ def main():
     if not args.skip_ad and Path("data/AD").exists():
         print("Rendering anomaly-detection plots…")
         ad_data = read_ad_data("data/AD")
-        plot_ad_results(
+        ad_outputs = plot_ad_results_webpage(
             ad_data,
             output_root=str(plots_root),
             file_format=args.format,
             dpi=args.dpi,
-            save_individual_axes=False,
         )
+        ad_plots = [
+            *[
+                {"src": str(Path(path).relative_to(output_dir)), "caption": "AD: median significance by channel"}
+                for path in ad_outputs["sig"]
+            ],
+            *[
+                {"src": str(Path(path).relative_to(output_dir)), "caption": "AD: generative calibration and MMD"}
+                for path in ad_outputs["gen"]
+            ],
+        ]
         sections.append(
             _section(
                 "ad",
                 "Dimuon anomaly-detection benchmark",
                 "Significance summaries and calibration metrics across OS/SS channels.",
-                [
-                    {"src": f"plots/AD/ad_significance.{args.format}", "caption": "AD: median significance by channel"},
-                    {"src": f"plots/AD/ad_generation.{args.format}", "caption": "AD: generative calibration and MMD"},
-                ],
+                ad_plots,
             )
         )
     else:

@@ -10,6 +10,7 @@ from matplotlib.gridspec import GridSpec
 from plot_styles.core.bar_plot import plot_model_bars
 from plot_styles.core.line_plot import plot_models_line
 from plot_styles.core.style_axis import style_axis_basic
+from plot_styles.core.theme import PlotStyle, scaled_fig_size, use_style
 
 
 def plot_bar_line(
@@ -25,12 +26,15 @@ def plot_bar_line(
     x_label: str = "Train Size [K]",
     y_min: Optional[float] = None,
     fig_size=(14, 6),
+    fig_scale: float = 1.0,
+    fig_aspect: Optional[float] = None,
     panel_ratio=(3, 2),
     x_indicator: Optional[float] = None,
     logy: bool = False,
     logx: bool = False,
     save_path: Optional[str] = None,
     bar_train_size: Optional[int] = None,
+    style: PlotStyle | None = None,
 ) -> tuple:
     """Render paired bar/line panels for a given metric.
 
@@ -39,10 +43,12 @@ def plot_bar_line(
     if head_order is None:
         head_order = [None]
 
-    fig = plt.figure(figsize=fig_size)
-    gs = GridSpec(1, 2, width_ratios=panel_ratio)
-    ax_left = fig.add_subplot(gs[0])
-    ax_right = fig.add_subplot(gs[1])
+    with use_style(style):
+        resolved_size = scaled_fig_size(fig_size, scale=fig_scale, aspect_ratio=fig_aspect)
+        fig = plt.figure(figsize=resolved_size)
+        gs = GridSpec(1, 2, width_ratios=panel_ratio)
+        ax_left = fig.add_subplot(gs[0])
+        ax_right = fig.add_subplot(gs[1])
 
     train_size_for_bar = bar_train_size or max(train_sizes)
     active_bars = plot_model_bars(
@@ -52,6 +58,7 @@ def plot_bar_line(
         model_order=model_order,
         head_order=head_order,
         train_size_for_bar=train_size_for_bar,
+        bar_kwargs={"linewidth": 0.8 * (style.object_scale if style else 1.0)},
     )
 
     active_lines = plot_models_line(
@@ -63,6 +70,7 @@ def plot_bar_line(
         train_sizes=train_sizes,
         dataset_markers=dataset_markers,
         head_order=head_order if head_order != [None] else None,
+        size_scale=style.object_scale if style else 1.0,
     )
 
     line_scale = "log" if logx else None
@@ -74,6 +82,7 @@ def plot_bar_line(
         x_label="Full dataset size" if head_order == [None] else "Head",
         y_min=y_min[0] if isinstance(y_min, (tuple, list)) else y_min,
         yscale=y_scale,
+        style=style,
     )
     style_axis_basic(
         ax_right,
@@ -83,6 +92,7 @@ def plot_bar_line(
         xscale=line_scale,
         yscale=y_scale,
         x_indicator=x_indicator,
+        style=style,
     )
 
     active_models = [m for m in model_order if m in set(active_bars + active_lines)]
@@ -91,3 +101,99 @@ def plot_bar_line(
         fig.savefig(save_path, bbox_inches="tight")
 
     return fig, (ax_left, ax_right), active_models
+
+
+def plot_metric_scatter(
+    data_df,
+    *,
+    metric: str,
+    model_order: Sequence[str],
+    train_sizes: Sequence[int],
+    dataset_markers: dict,
+    dataset_pretty: dict,
+    head_order: Optional[Sequence[str]] = None,
+    y_label: str = "Metric",
+    x_label: str = "Train Size [K]",
+    y_min: Optional[float] = None,
+    fig_size=(7, 6),
+    fig_scale: float = 1.0,
+    fig_aspect: Optional[float] = None,
+    logy: bool = False,
+    logx: bool = False,
+    style: PlotStyle | None = None,
+):
+    """Render a single scatter/line plot for a metric across train sizes."""
+
+    head_order = head_order or [None]
+    with use_style(style):
+        resolved_size = scaled_fig_size(fig_size, scale=fig_scale, aspect_ratio=fig_aspect)
+        fig, ax = plt.subplots(figsize=resolved_size)
+
+    active_lines = plot_models_line(
+        ax,
+        data_df,
+        x_col="train_size",
+        y_col=metric,
+        model_order=model_order,
+        train_sizes=train_sizes,
+        dataset_markers=dataset_markers,
+        dataset_pretty=dataset_pretty,
+        head_order=head_order,
+        size_scale=style.object_scale if style else 1.0,
+    )
+
+    line_scale = "log" if logx else None
+    y_scale = "log" if logy else None
+
+    style_axis_basic(
+        ax,
+        y_label=y_label,
+        x_label=x_label,
+        y_min=y_min,
+        xscale=line_scale,
+        yscale=y_scale,
+        style=style,
+    )
+
+    active_models = [m for m in model_order if m in set(active_lines)]
+    return fig, ax, active_models
+
+
+def plot_metric_bar(
+    data_df,
+    *,
+    metric: str,
+    model_order: Sequence[str],
+    head_order: Sequence[str],
+    train_size_for_bar: int,
+    y_label: str = "Metric",
+    fig_size=(6, 6),
+    fig_scale: float = 1.0,
+    fig_aspect: Optional[float] = None,
+    bar_kwargs: Optional[dict] = None,
+    style: PlotStyle | None = None,
+):
+    """Render a grouped bar plot for a metric at a fixed train size."""
+
+    with use_style(style):
+        resolved_size = scaled_fig_size(fig_size, scale=fig_scale, aspect_ratio=fig_aspect)
+        fig, ax = plt.subplots(figsize=resolved_size)
+
+    active_models = plot_model_bars(
+        ax,
+        data_df,
+        metric=metric,
+        model_order=model_order,
+        head_order=head_order,
+        train_size_for_bar=train_size_for_bar,
+        bar_kwargs=bar_kwargs or {"linewidth": 0.8 * (style.object_scale if style else 1.0)},
+    )
+
+    style_axis_basic(
+        ax,
+        y_label=y_label,
+        x_label="Full dataset size" if head_order == [None] else "Head",
+        style=style,
+    )
+
+    return fig, ax, active_models

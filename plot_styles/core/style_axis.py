@@ -10,13 +10,22 @@ from typing import Optional
 import os
 import matplotlib.pyplot as plt
 
+from plot_styles.core.theme import PlotStyle
 
-def apply_nature_axis_style(ax):
+
+def apply_nature_axis_style(ax, *, style: PlotStyle | None = None):
     """Apply a consistent, clean axis style.
 
     This is adapted from the previous utilities but kept isolated so
     it can be reused by any axis-level plotter.
     """
+    scale = style.object_scale if style is not None else 1.0
+    tick_size = (
+        style.tick_label_size
+        if style is not None and style.tick_label_size is not None
+        else plt.rcParams.get("xtick.labelsize", 11)
+    )
+
     ax.tick_params(reset=True)
 
     # Remove grid lines and hide top/right spines
@@ -37,18 +46,19 @@ def apply_nature_axis_style(ax):
         axis='both',
         which='major',
         direction='out',
-        length=5,
-        width=1.0,
-        labelsize=11,
-        pad=3,
+        length=5 * scale,
+        width=1.0 * scale,
+        labelsize=tick_size,
+        pad=3 * scale,
         bottom=True,
         top=False,
         left=True,
         right=False,
     )
 
-    ax.xaxis.labelpad = 4
-    ax.yaxis.labelpad = 4
+    label_pad = 4 * scale
+    ax.xaxis.labelpad = label_pad
+    ax.yaxis.labelpad = label_pad
 
 
 def style_axis_basic(
@@ -61,6 +71,7 @@ def style_axis_basic(
     y_min: Optional[float] = None,
     x_indicator: Optional[float] = None,
     grid: bool = False,
+    style: PlotStyle | None = None,
 ):
     """Apply common axis styling without touching figure layout.
 
@@ -89,7 +100,7 @@ def style_axis_basic(
     if y_min is not None:
         ax.set_ylim(bottom=y_min)
 
-    apply_nature_axis_style(ax)
+    apply_nature_axis_style(ax, style=style)
 
     if grid:
         ax.grid(True, which="both", linestyle="--", linewidth=0.5, alpha=0.7)
