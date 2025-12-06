@@ -225,23 +225,21 @@ def sic_plot(
     bitmap_formats = {"png", "jpg", "jpeg", "tiff", "bmp"}
     save_kwargs = {"dpi": dpi} if file_format.lower() in bitmap_formats else {}
 
-    axes = [ax_curve, ax_bar, ax_scatter]
-
-    if save_individual_axes and plot_dir is not None:
+    if save_individual_axes:
         save_axis(
-            axes[0],
+            ax_curve,
             plot_dir,
             f_name=_with_ext("sic_curve"),
             dpi=dpi,
         )
         save_axis(
-            axes[1],
+            ax_bar,
             plot_dir,
             f_name=_with_ext("sic_bar"),
             dpi=dpi,
         )
         save_axis(
-            axes[2],
+            ax_scatter,
             plot_dir,
             f_name=_with_ext("sic_scatter"),
             dpi=dpi,
@@ -270,4 +268,4 @@ def sic_plot(
         plot_des = os.path.join(plot_dir, _with_ext(f_name))
         fig.savefig(str(plot_des), bbox_inches="tight", **save_kwargs)
         print(f"Saved figure → {plot_des}")
-    return fig, axes, active_models
+    return fig
