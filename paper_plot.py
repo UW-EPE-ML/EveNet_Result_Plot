@@ -400,7 +400,7 @@ def plot_bsm_results(
         for idx, axis in enumerate(axes_pair):
             save_axis(axis, plot_dir, f_name=_with_ext(f"pair_panel_{idx + 1}", file_format), dpi=dpi)
 
-    sic_plot(
+    fig_sic = sic_plot(
         data[data["mass_a"] == "30"],
         model_order=BSM_MODEL,
         train_sizes=BSM_TRAIN_SIZE,
@@ -417,6 +417,10 @@ def plot_bsm_results(
         file_format=file_format,
         dpi=dpi,
     )
+    fig_sic.savefig(os.path.join(plot_dir, _with_ext("sic", file_format)), bbox_inches="tight", **_save_kwargs(file_format, dpi))
+    if save_individual_axes:
+        for idx, axis in enumerate(axes_pair):
+            save_axis(axis, plot_dir, f_name=_with_ext(f"sic_panel_{idx + 1}", file_format), dpi=dpi)
 
 
 def read_ad_data(file_path):
