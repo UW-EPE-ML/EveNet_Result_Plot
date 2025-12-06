@@ -11,7 +11,6 @@ from plot_styles.sic import sic_plot
 from plot_styles.ad_bar import plot_ad_sig_summary, plot_ad_gen_summary
 from plot_styles.core.legend import plot_legend, plot_only_legend
 from plot_styles.core.style_axis import save_axis
-from plot_styles.core.theme import PlotStyle, scaled_fig_size, use_style
 from plot_styles.style import MODEL_COLORS, HEAD_LINESTYLES
 
 
@@ -41,28 +40,20 @@ def plot_task_legend(
     file_format: str = "pdf",
     dpi: int | None = None,
     f_name: str = "legend",
-    fig_size: tuple[float, float] = (7.5, 2.5),
-    fig_scale: float | None = None,
-    fig_aspect: float | None = None,
-    style: PlotStyle | None = None,
 ):
     """Render a standalone legend shared by a task's plots."""
 
-    scale = fig_scale if fig_scale is not None else (style.figure_scale if style else 1.0)
-    resolved_size = scaled_fig_size(fig_size, scale=scale, aspect_ratio=fig_aspect)
-    with use_style(style):
-        fig = plot_only_legend(
-            fig_size=resolved_size,
-            active_models=model_order,
-            train_sizes=train_sizes,
-            dataset_markers=dataset_markers,
-            dataset_pretty=dataset_pretty,
-            model_colors=MODEL_COLORS,
-            head_order=head_order,
-            head_linestyles=HEAD_LINESTYLES,
-            legends=legends,
-            style=style,
-        )
+    fig = plot_only_legend(
+        fig_size=(7.5, 2.5),
+        active_models=model_order,
+        train_sizes=train_sizes,
+        dataset_markers=dataset_markers,
+        dataset_pretty=dataset_pretty,
+        model_colors=MODEL_COLORS,
+        head_order=head_order,
+        head_linestyles=HEAD_LINESTYLES,
+        legends=legends,
+    )
 
     os.makedirs(plot_dir, exist_ok=True)
     legend_path = os.path.join(plot_dir, _with_ext(f_name, file_format))
@@ -101,9 +92,6 @@ def plot_qe_results(
     dpi: int | None = None,
     save_individual_axes: bool = True,
     with_legend: bool = True,
-    style: PlotStyle | None = None,
-    fig_scale: float | None = None,
-    fig_aspect: float | None = None,
 ):
     from plot_styles.style import QE_DATASET_MARKERS, QE_DATASET_PRETTY
 
@@ -113,34 +101,28 @@ def plot_qe_results(
     QE_MODEL_ORDER = ["Nominal", "Scratch", "SSL", "Ref."]
 
     plot_dir = os.path.join(output_root, "QE")
-    scale = fig_scale if fig_scale is not None else (style.figure_scale if style else 1.0)
 
-    with use_style(style):
-        fig, axes, active_models = plot_loss(
-            data,
+    fig, axes, active_models = plot_loss(
+        data,
+        train_sizes=QE_TRAIN_SIZE,
+        model_order=QE_MODEL_ORDER,
+        dataset_markers=QE_DATASET_MARKERS,
+        dataset_pretty=QE_DATASET_PRETTY,
+        y_min=0.82,
+        fig_size=(7, 6),
+        grid=True,
+    )
+
+    if with_legend:
+        plot_legend(
+            fig,
+            active_models=active_models,
             train_sizes=QE_TRAIN_SIZE,
-            model_order=QE_MODEL_ORDER,
             dataset_markers=QE_DATASET_MARKERS,
             dataset_pretty=QE_DATASET_PRETTY,
-            y_min=0.82,
-            fig_size=(7, 6),
-            grid=True,
-            style=style,
-            fig_scale=scale,
-            fig_aspect=fig_aspect,
+            model_colors=MODEL_COLORS,
+            legends=["dataset", "models"],
         )
-
-        if with_legend:
-            plot_legend(
-                fig,
-                active_models=active_models,
-                train_sizes=QE_TRAIN_SIZE,
-                dataset_markers=QE_DATASET_MARKERS,
-                dataset_pretty=QE_DATASET_PRETTY,
-                model_colors=MODEL_COLORS,
-                legends=["dataset", "models"],
-                style=style,
-            )
     os.makedirs(plot_dir, exist_ok=True)
     fig.savefig(os.path.join(plot_dir, _with_ext("loss", file_format)), bbox_inches="tight", **_save_kwargs(file_format, dpi))
     if save_individual_axes:
@@ -160,9 +142,6 @@ def plot_qe_results(
         logx=True,
         panel_ratio=(2, 2),  # << tunable left:right panel ratio
         x_indicator=1e3,  # << typical dataset size indicator
-        style=style,
-        fig_scale=scale,
-        fig_aspect=fig_aspect,
     )
     if with_legend:
         plot_legend(
@@ -173,7 +152,6 @@ def plot_qe_results(
             dataset_pretty=QE_DATASET_PRETTY,
             model_colors=MODEL_COLORS,
             legends=["dataset", "models"],
-            style=style,
         )
     fig_pair.savefig(os.path.join(plot_dir, _with_ext("pair", file_format)), bbox_inches="tight", **_save_kwargs(file_format, dpi))
     if save_individual_axes:
@@ -194,9 +172,6 @@ def plot_qe_results(
         x_indicator=1e3,  # << typical dataset size indicator
         logy=False,
         logx=True,
-        style=style,
-        fig_scale=scale,
-        fig_aspect=fig_aspect,
     )
     if with_legend:
         plot_legend(
@@ -207,7 +182,6 @@ def plot_qe_results(
             dataset_pretty=QE_DATASET_PRETTY,
             model_colors=MODEL_COLORS,
             legends=["dataset", "models"],
-            style=style,
         )
     fig_delta.savefig(os.path.join(plot_dir, _with_ext("deltaD", file_format)), bbox_inches="tight", **_save_kwargs(file_format, dpi))
     if save_individual_axes:
@@ -390,9 +364,6 @@ def plot_bsm_results(
     dpi: int | None = None,
     save_individual_axes: bool = True,
     with_legend: bool = True,
-    style: PlotStyle | None = None,
-    fig_scale: float | None = None,
-    fig_aspect: float | None = None,
 ):
     from plot_styles.style import BSM_DATASET_MARKERS, BSM_DATASET_PRETTY
 
@@ -407,7 +378,6 @@ def plot_bsm_results(
     # BSM_HEAD = ["Cls", "Cls+Asn", "Cls+Seg", "Cls+Asn+Seg"]
 
     plot_dir = os.path.join(output_root, "BSM")
-    scale = fig_scale if fig_scale is not None else (style.figure_scale if style else 1.0)
 
     fig, axes, active_models = plot_loss(
         data[data["mass_a"] == "30"],
@@ -425,9 +395,6 @@ def plot_bsm_results(
             ]
         },
         grid=True,
-        style=style,
-        fig_scale=scale,
-        fig_aspect=fig_aspect,
     )
     if with_legend:
         plot_legend(
@@ -440,7 +407,6 @@ def plot_bsm_results(
             head_order=BSM_HEAD,
             head_linestyles=HEAD_LINESTYLES,
             legends=["dataset", "heads", "models"],
-            style=style,
         )
     os.makedirs(plot_dir, exist_ok=True)
     fig.savefig(os.path.join(plot_dir, _with_ext("loss", file_format)), bbox_inches="tight", **_save_kwargs(file_format, dpi))
@@ -462,9 +428,6 @@ def plot_bsm_results(
         logx=True,
         panel_ratio=(2, 2),  # << tunable left:right panel ratio
         x_indicator=BSM_TYPICAL_DATASET_SIZE,  # << typical dataset size indicator
-        style=style,
-        fig_scale=scale,
-        fig_aspect=fig_aspect,
     )
     if with_legend:
         plot_legend(
@@ -477,7 +440,6 @@ def plot_bsm_results(
             head_order=["Cls+Asn"],
             head_linestyles=HEAD_LINESTYLES,
             legends=["dataset", "heads", "models"],
-            style=style,
         )
     fig_pair.savefig(os.path.join(plot_dir, _with_ext("pair", file_format)), bbox_inches="tight", **_save_kwargs(file_format, dpi))
     if save_individual_axes:
@@ -500,9 +462,6 @@ def plot_bsm_results(
         save_individual_axes=save_individual_axes,
         file_format=file_format,
         dpi=dpi,
-        style=style,
-        fig_scale=scale,
-        fig_aspect=fig_aspect,
     )
     if with_legend:
         plot_legend(
@@ -515,7 +474,6 @@ def plot_bsm_results(
             head_order=BSM_HEAD,
             head_linestyles=HEAD_LINESTYLES,
             legends=["dataset", "heads", "models"],
-            style=style,
         )
     fig_sic.savefig(os.path.join(plot_dir, _with_ext("sic", file_format)), bbox_inches="tight", **_save_kwargs(file_format, dpi))
     if save_individual_axes:
@@ -535,9 +493,6 @@ def plot_qe_results_webpage(
     output_root: str = "plot",
     file_format: str = "pdf",
     dpi: int | None = None,
-    style: PlotStyle | None = None,
-    fig_scale: float | None = None,
-    fig_aspect: float | None = None,
 ):
     from plot_styles.style import QE_DATASET_MARKERS, QE_DATASET_PRETTY
 
@@ -559,9 +514,6 @@ def plot_qe_results_webpage(
         legends=["dataset", "heads", "models"],
         file_format=file_format,
         dpi=dpi,
-        style=style,
-        fig_scale=fig_scale,
-        fig_aspect=fig_aspect,
     )
 
     results = plot_qe_results(
@@ -571,9 +523,6 @@ def plot_qe_results_webpage(
         dpi=dpi,
         save_individual_axes=True,
         with_legend=False,
-        style=style,
-        fig_scale=fig_scale,
-        fig_aspect=fig_aspect,
     )
 
     return {
@@ -590,9 +539,6 @@ def plot_bsm_results_webpage(
     output_root: str = "plot",
     file_format: str = "pdf",
     dpi: int | None = None,
-    style: PlotStyle | None = None,
-    fig_scale: float | None = None,
-    fig_aspect: float | None = None,
 ):
     from plot_styles.style import BSM_DATASET_MARKERS, BSM_DATASET_PRETTY
 
@@ -614,9 +560,6 @@ def plot_bsm_results_webpage(
         legends=["dataset", "heads", "models"],
         file_format=file_format,
         dpi=dpi,
-        style=style,
-        fig_scale=fig_scale,
-        fig_aspect=fig_aspect,
     )
 
     results = plot_bsm_results(
@@ -626,9 +569,6 @@ def plot_bsm_results_webpage(
         dpi=dpi,
         save_individual_axes=True,
         with_legend=False,
-        style=style,
-        fig_scale=fig_scale,
-        fig_aspect=fig_aspect,
     )
 
     return {
@@ -737,15 +677,11 @@ def plot_ad_results(
     file_format: str = "pdf",
     dpi: int | None = None,
     save_individual_axes: bool = True,
-    style: PlotStyle | None = None,
-    fig_scale: float | None = None,
-    fig_aspect: float | None = None,
 ):
     AD_MODEL = ["Nominal", "Scratch", "SSL"]
     # AD_MODEL = ["Nominal", "Scratch", "SSL", "Ablation"]
 
     plot_dir = os.path.join(output_root, "AD")
-    scale = fig_scale if fig_scale is not None else (style.figure_scale if style else 1.0)
 
     plot_ad_sig_summary(
         data['sig'],
@@ -754,10 +690,7 @@ def plot_ad_results(
         show_error=True, var="median", f_name=_with_ext("ad_significance", file_format), plot_dir=plot_dir,
         dpi=dpi,
         file_format=file_format,
-        y_ref=6.4,
-        style=style,
-        fig_scale=scale,
-        fig_aspect=fig_aspect,
+        y_ref=6.4
     )
 
     plot_ad_gen_summary(
@@ -771,9 +704,6 @@ def plot_ad_results(
         save_individual_axes=save_individual_axes,
         dpi=dpi,
         file_format=file_format,
-        style=style,
-        fig_scale=scale,
-        fig_aspect=fig_aspect,
     )
 
     pass
@@ -785,9 +715,6 @@ def plot_ad_results_webpage(
     output_root: str = "plot",
     file_format: str = "pdf",
     dpi: int | None = None,
-    style: PlotStyle | None = None,
-    fig_scale: float | None = None,
-    fig_aspect: float | None = None,
 ):
     plot_dir = os.path.join(output_root, "AD")
 
@@ -797,9 +724,6 @@ def plot_ad_results_webpage(
         file_format=file_format,
         dpi=dpi,
         save_individual_axes=True,
-        style=style,
-        fig_scale=fig_scale,
-        fig_aspect=fig_aspect,
     )
 
     return {
