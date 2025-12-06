@@ -248,11 +248,18 @@ def sic_plot(
     active_models = list(set(active_models))
     active_models = [m for m in model_order if m in active_models]
 
-    if with_legend: plot_legend(
-        fig, active_models, train_sizes, dataset_markers, dataset_pretty, MODEL_COLORS,
-        head_order, HEAD_LINESTYLES,
-        legends=["dataset", "heads", "models"]
-    )
+    if with_legend:
+        plot_legend(
+            fig,
+            active_models=active_models,
+            train_sizes=train_sizes,
+            dataset_markers=dataset_markers,
+            dataset_pretty=dataset_pretty,
+            model_colors=MODEL_COLORS,
+            head_order=head_order,
+            head_linestyles=HEAD_LINESTYLES,
+            legends=["dataset", "heads", "models"],
+        )
 
     plt.tight_layout(rect=(0, 0, 1, 0.93))
     if f_name is not None:
