@@ -184,6 +184,8 @@ DEFAULT_AD_CONFIG = {
         "f_name": "ad_generation_mmd",
         "fig_size": (6, 4),
         "y_min": 0.6,
+        "train_types": ["OS", "SS"],
+        "region_gap": 0.4,
     },
     "gen_calibration": {
         "metric": "mean_calibration_difference",
@@ -192,6 +194,8 @@ DEFAULT_AD_CONFIG = {
         "fig_size": (6, 4),
         "y_min": 0,
         "percentage": True,
+        "train_types": ["OS", "SS"],
+        "region_gap": 0.4,
     },
 }
 
@@ -1156,6 +1160,8 @@ def plot_ad_results(
             models_order=cfg["models"],
             metric=gen_cfg.get("metric", "mmd"),
             label=gen_cfg.get("label", ""),
+            train_types=gen_cfg.get("train_types"),
+            region_gap=gen_cfg.get("region_gap", 0.4),
             f_name=f_name,
             plot_dir=plot_dir,
             y_min=gen_cfg.get("y_min"),

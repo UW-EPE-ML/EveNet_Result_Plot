@@ -194,6 +194,8 @@ def plot_ad_gen_summary(
         fig_scale: float = 1.0,
         fig_aspect: float | None = None,
         label="MMD",
+        train_types: tuple[str, ...] | list[str] = ("OS", "SS"),
+        region_gap: float = 0.4,
         y_min=None,
         f_name=None,
         plot_dir="./",
@@ -207,7 +209,7 @@ def plot_ad_gen_summary(
     """
     Single-panel bar plot for an after-cut metric (e.g., MMD or calibration magnitude).
 
-    - X-axis: OS / SS
+    - X-axis: configurable training regions (default: OS / SS)
     - Colors: model types (green/blue scheme)
     - Hatching: calibrated vs uncalibrated
     - Error bars: central 68% interval (16–84% quantiles)
@@ -221,12 +223,35 @@ def plot_ad_gen_summary(
 
     n_methods = len(model_list)
 
+    # user-provided ordering or unique values from data
+    if train_types is None:
+        x_groups = tuple(sorted(df["train_type"].unique()))
+    else:
+        x_groups = tuple(train_types)
+
+    # determine which calibration states actually have data to avoid gaps
+    available_cal_states = []
+    for cal_state in [False, True]:
+        has_data = any(
+            df[
+                (df["model"] == m)
+                & (df["calibrated"] == cal_state)
+                & (df["train_type"].isin(x_groups))
+            ][metric].notna().any()
+            for m in model_list
+        )
+        if has_data:
+            available_cal_states.append(cal_state)
+
+    if not available_cal_states:
+        available_cal_states = [True]
+
     def agg(metric_name):
         result = {}
         for m in model_list:
-            for cal in [False, True]:
+            for cal in available_cal_states:
                 group_stats = []
-                for g in ["OS", "SS"]:
+                for g in x_groups:
                     tmp = df[
                         (df["model"] == m) &
                         (df["calibrated"] == cal) &
@@ -254,33 +279,31 @@ def plot_ad_gen_summary(
         resolved_size = scaled_fig_size(resolved_figsize, scale=fig_scale, aspect_ratio=fig_aspect)
         fig, ax = plt.subplots(figsize=resolved_size)
 
-    x_groups = ["OS", "SS"]
-    n_bars = n_methods * 2
-    total_width = 1.0
-    bar_width = total_width / n_bars
-    start_positions = np.arange(len(x_groups)) - total_width / 2 + bar_width / 2
+    n_cal_states = len(available_cal_states)
+    n_bars = max(1, n_methods * n_cal_states)
+    bar_width = 0.8 / n_bars
+
+    group_offsets = []
+    cumulative_offset = 0.0
+    for _ in x_groups:
+        group_offsets.append(cumulative_offset)
+        cumulative_offset += n_bars * bar_width + region_gap
 
     for i, method in enumerate(model_list):
-        for j, cal in enumerate([False, True]):
-            centers = [
-                metric_data[(method, cal)][0][0],
-                metric_data[(method, cal)][1][0],
-            ]
-            err_lows = [
-                metric_data[(method, cal)][0][1],
-                metric_data[(method, cal)][1][1],
-            ]
-            err_highs = [
-                metric_data[(method, cal)][0][2],
-                metric_data[(method, cal)][1][2],
-            ]
+        for j, cal in enumerate(available_cal_states):
+            centers = [metric_data[(method, cal)][idx][0] for idx in range(len(x_groups))]
+            err_lows = [metric_data[(method, cal)][idx][1] for idx in range(len(x_groups))]
+            err_highs = [metric_data[(method, cal)][idx][2] for idx in range(len(x_groups))]
 
             if percentage:
                 centers = [100 * n for n in centers]
                 err_lows = [100 * n for n in err_lows]
                 err_highs = [100 * n for n in err_highs]
 
-            xpos = start_positions + (i * 2 + j) * bar_width
+            xpos = (
+                np.array(group_offsets)
+                + (i * n_cal_states + j - n_bars / 2 + 0.5) * bar_width
+            )
 
             color = MODEL_COLORS[method]
             hatch = None if cal else "//"
@@ -300,7 +323,7 @@ def plot_ad_gen_summary(
                 linewidth=0.8,
             )
 
-    ax.set_xticks(np.arange(2))
+    ax.set_xticks(group_offsets)
     ax.set_xticklabels(x_groups)
     ax.set_ylabel(label)
     apply_nature_axis_style(ax, style=style)
