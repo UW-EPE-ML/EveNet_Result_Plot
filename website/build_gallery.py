@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import argparse
 import sys
+import numpy as np
+import pandas as pd
 from pathlib import Path
 from typing import Dict, List
 
@@ -26,6 +28,9 @@ import matplotlib  # noqa: E402
 matplotlib.use("Agg")
 
 from paper_plot import (  # noqa: E402  # pylint: disable=wrong-import-position
+    DEFAULT_AD_CONFIG,
+    DEFAULT_BSM_CONFIG,
+    DEFAULT_QE_CONFIG,
     read_ad_data,
     read_bsm_data,
     read_qe_data,
@@ -35,18 +40,12 @@ from paper_plot import (  # noqa: E402  # pylint: disable=wrong-import-position
 )
 
 
-def _render_index(output_dir: Path, sections: List[Dict[str, str]]) -> None:
+def _render_index(output_dir: Path, sections: List[Dict[str, object]]) -> None:
     """Write a minimal HTML page to preview all generated plots."""
 
     cards = []
     for section in sections:
-        card_items = "\n".join(
-            [
-                f"<figure><img src=\"{plot['src']}\" alt=\"{plot['caption']}\" "
-                f"loading=\"lazy\"><figcaption>{plot['caption']}</figcaption></figure>"
-                for plot in section["plots"]
-            ]
-        )
+        card_items = "\n".join([_render_plot_card(plot) for plot in section["plots"]])
         cards.append(
             f"<section id=\"{section['id']}\">"
             f"<h2>{section['title']}</h2>"
@@ -96,6 +95,31 @@ def _render_index(output_dir: Path, sections: List[Dict[str, str]]) -> None:
       margin: 0;
       box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
     }}
+    figure .table-container {{
+      overflow-x: auto;
+      margin-top: 0.35rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      padding-top: 0.35rem;
+    }}
+    table.data-table {{
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+      color: #e2e8f0;
+    }}
+    table.data-table th,
+    table.data-table td {{
+      padding: 0.25rem 0.35rem;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      text-align: left;
+      white-space: nowrap;
+    }}
+    table.data-table th {{
+      background: rgba(255, 255, 255, 0.06);
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }}
     figure img {{
       width: 100%;
       height: auto;
@@ -131,14 +155,209 @@ def _section(
     section_id: str,
     title: str,
     blurb: str,
-    plots: List[Dict[str, str]],
-) -> Dict[str, str]:
+    plots: List[Dict[str, object]],
+) -> Dict[str, object]:
     return {
         "id": section_id,
         "title": title,
         "blurb": blurb,
         "plots": plots,
     }
+
+
+def _fmt(val):
+    if isinstance(val, float):
+        return f"{val:.4g}"
+    return "" if val is None else str(val)
+
+
+def _table_from_dicts(rows: List[Dict[str, object]], *, header_order: List[str] | None = None):
+    if not rows:
+        return None
+    keys = header_order or list(dict.fromkeys(k for row in rows for k in row.keys()))
+    formatted_rows = [[_fmt(row.get(k)) for k in keys] for row in rows]
+    return {"headers": keys, "rows": formatted_rows}
+
+
+def _render_table(table: Dict[str, object] | None) -> str:
+    if not table:
+        return ""
+    header_html = "".join(f"<th>{h}</th>" for h in table["headers"])
+    row_html = "".join(
+        "<tr>" + "".join(f"<td>{cell}</td>" for cell in row) + "</tr>" for row in table["rows"]
+    )
+    return (
+        "<div class=\"table-container\">"
+        "<table class=\"data-table\">"
+        f"<thead><tr>{header_html}</tr></thead>"
+        f"<tbody>{row_html}</tbody>"
+        "</table>"
+        "</div>"
+    )
+
+
+def _render_plot_card(plot: Dict[str, object]) -> str:
+    table_html = _render_table(plot.get("table"))
+    caption = plot.get("caption", "")
+    image_html = "" if plot.get("no_image") else (
+        f"<img src=\"{plot['src']}\" alt=\"{caption}\" loading=\"lazy\">"
+    )
+    return (
+        "<figure>"
+        f"{image_html}"
+        f"<figcaption>{caption}</figcaption>"
+        f"{table_html}"
+        "</figure>"
+    )
+
+
+def _scatter_table(
+    df,
+    *,
+    metric: str,
+    train_sizes: List[int],
+    model_order: List[str],
+    head_order: List[str] | None = None,
+) -> Dict[str, object] | None:
+    head_iter = head_order or [None]
+    rows = []
+    unc_candidates = [f"{metric}_unc", "uncertainty"]
+    unc_col = next((c for c in unc_candidates if c in df.columns), None)
+
+    for model in model_order:
+        df_model = df[df["model"] == model]
+        if df_model.empty:
+            continue
+        for head in head_iter:
+            df_head = df_model
+            if head is not None and "head" in df_head.columns:
+                df_head = df_head[df_head["head"] == head]
+            df_head = df_head[df_head["train_size"].isin(train_sizes)]
+            if df_head.empty:
+                continue
+            for _, row in df_head.sort_values("train_size").iterrows():
+                rows.append(
+                    {
+                        "model": model,
+                        **({"head": head} if head is not None else {}),
+                        "train_size": row.get("train_size"),
+                        metric: row.get(metric),
+                        "error": row.get(unc_col) if unc_col else None,
+                    }
+                )
+    headers = ["model"] + (["head"] if head_order else []) + ["train_size", metric, "error"]
+    return _table_from_dicts(rows, header_order=headers)
+
+
+def _bar_table(
+    df,
+    *,
+    metric: str,
+    model_order: List[str],
+    head_order: List[str],
+    train_size_for_bar: int,
+) -> Dict[str, object] | None:
+    rows = []
+    for model in model_order:
+        df_model = df[(df["model"] == model) & (df["train_size"] == train_size_for_bar)]
+        if df_model.empty:
+            continue
+        for head in head_order:
+            df_head = df_model
+            if head is not None and "head" in df_head.columns:
+                df_head = df_head[df_head["head"] == head]
+            df_head = df_head.dropna(subset=[metric])
+            if df_head.empty:
+                continue
+            df_head = df_head.sort_values(metric)
+            y_val = df_head[metric].iloc[-1]
+            rows.append(
+                {
+                    "model": model,
+                    **({"head": head} if head is not None else {}),
+                    "train_size": train_size_for_bar,
+                    metric: y_val,
+                }
+            )
+    headers = ["model"] + (["head"] if head_order and head_order != [None] else []) + ["train_size", metric]
+    return _table_from_dicts(rows, header_order=headers)
+
+
+def _loss_table(df, *, model_order: List[str]) -> Dict[str, object] | None:
+    rows = []
+    for model in model_order:
+        df_model = df[df["model"] == model]
+        if df_model.empty:
+            continue
+        head_values = [None]
+        if "head" in df_model.columns:
+            head_values = sorted(df_model["head"].dropna().unique())
+        for head in head_values:
+            df_head = df_model if head is None else df_model[df_model["head"] == head]
+            for _, row in df_head.sort_values("effective_step").iterrows():
+                rows.append(
+                    {
+                        "model": model,
+                        **({"head": head} if head is not None else {}),
+                        "effective_step": row.get("effective_step"),
+                        "val_loss": row.get("val_loss"),
+                    }
+                )
+    headers = ["model"] + (["head"] if any("head" in r for r in rows) else []) + ["effective_step", "val_loss"]
+    return _table_from_dicts(rows, header_order=headers)
+
+
+def _ad_significance_table(df) -> Dict[str, object] | None:
+    rows = []
+    for _, row in df.iterrows():
+        rows.append(
+            {
+                "model": row.get("model"),
+                "channel": row.get("channel"),
+                "calibrated": row.get("calibrated"),
+                "median": row.get("median"),
+                "lower_error": row.get("median") - row.get("lower") if not pd.isna(row.get("lower")) else None,
+                "upper_error": row.get("upper") - row.get("median") if not pd.isna(row.get("upper")) else None,
+            }
+        )
+    return _table_from_dicts(
+        rows,
+        header_order=["model", "channel", "calibrated", "median", "lower_error", "upper_error"],
+    )
+
+
+def _ad_generation_table(df, *, models_order: List[str]) -> Dict[str, object] | None:
+    def agg(metric: str):
+        result = []
+        for model in models_order:
+            for cal in [False, True]:
+                for group in ["OS", "SS"]:
+                    subset = df[(df["model"] == model) & (df["calibrated"] == cal) & (df["train_type"] == group)][
+                        metric
+                    ].dropna()
+                    if subset.empty:
+                        center = err_low = err_high = np.nan
+                    else:
+                        q16, q50, q84 = np.nanpercentile(subset, [16, 50, 84])
+                        center, err_low, err_high = q50, q50 - q16, q84 - q50
+                    result.append(
+                        {
+                            "metric": metric,
+                            "model": model,
+                            "calibrated": cal,
+                            "group": group,
+                            "value": center,
+                            "lower_error": err_low,
+                            "upper_error": err_high,
+                        }
+                    )
+        return result
+
+    rows = agg("mmd") + agg("mean_calibration_difference")
+    return _table_from_dicts(
+        rows,
+        header_order=["metric", "model", "group", "calibrated", "value", "lower_error", "upper_error"],
+    )
 
 
 def main():
@@ -155,7 +374,7 @@ def main():
     plots_root = output_dir / "plots"
     plots_root.mkdir(parents=True, exist_ok=True)
 
-    sections: List[Dict[str, str]] = []
+    sections: List[Dict[str, object]] = []
 
     if not args.skip_qe and Path("data/QE_results_table.csv").is_file():
         print("Rendering QC/QE plots…")
@@ -166,18 +385,64 @@ def main():
             file_format=args.format,
             dpi=args.dpi,
         )
+        qe_loss_table = _loss_table(qe_data, model_order=DEFAULT_QE_CONFIG["models"])
+        pair_bar_size = max(DEFAULT_QE_CONFIG["train_sizes"])
+        qe_pair_tables = [
+            _scatter_table(
+                qe_data,
+                metric=DEFAULT_QE_CONFIG["pair_scatter"]["metric"],
+                train_sizes=DEFAULT_QE_CONFIG["train_sizes"],
+                model_order=DEFAULT_QE_CONFIG["models"],
+                head_order=DEFAULT_QE_CONFIG.get("heads") or None,
+            ),
+            _bar_table(
+                qe_data,
+                metric=DEFAULT_QE_CONFIG["pair_bar"]["metric"],
+                model_order=DEFAULT_QE_CONFIG["models"],
+                head_order=DEFAULT_QE_CONFIG.get("heads") or [None],
+                train_size_for_bar=pair_bar_size,
+            ),
+        ]
+        qe_delta_tables = [
+            _scatter_table(
+                qe_data,
+                metric=DEFAULT_QE_CONFIG["delta_scatter"]["metric"],
+                train_sizes=DEFAULT_QE_CONFIG["train_sizes"],
+                model_order=DEFAULT_QE_CONFIG["models"],
+                head_order=DEFAULT_QE_CONFIG.get("heads") or None,
+            ),
+            _bar_table(
+                qe_data,
+                metric=DEFAULT_QE_CONFIG["delta_bar"]["metric"],
+                model_order=DEFAULT_QE_CONFIG["models"],
+                head_order=DEFAULT_QE_CONFIG.get("heads") or [None],
+                train_size_for_bar=pair_bar_size,
+            ),
+        ]
         qe_plots = [
             {"src": str(Path(qe_outputs["legend"]).relative_to(output_dir)), "caption": "QC/QE legend"},
             *[
-                {"src": str(Path(path).relative_to(output_dir)), "caption": f"QC: loss panel {i + 1}"}
+                {
+                    "src": str(Path(path).relative_to(output_dir)),
+                    "caption": f"QC: loss panel {i + 1}",
+                    "table": qe_loss_table,
+                }
                 for i, path in enumerate(qe_outputs["loss"])
             ],
             *[
-                {"src": str(Path(path).relative_to(output_dir)), "caption": f"QC: pairing panel {i + 1}"}
+                {
+                    "src": str(Path(path).relative_to(output_dir)),
+                    "caption": f"QC: pairing panel {i + 1}",
+                    "table": qe_pair_tables[i],
+                }
                 for i, path in enumerate(qe_outputs["pair"])
             ],
             *[
-                {"src": str(Path(path).relative_to(output_dir)), "caption": f"QC: DeltaD panel {i + 1}"}
+                {
+                    "src": str(Path(path).relative_to(output_dir)),
+                    "caption": f"QC: DeltaD panel {i + 1}",
+                    "table": qe_delta_tables[i],
+                }
                 for i, path in enumerate(qe_outputs["delta"])
             ],
         ]
@@ -201,18 +466,50 @@ def main():
             file_format=args.format,
             dpi=args.dpi,
         )
+        bsm_pair_bar_size = DEFAULT_BSM_CONFIG.get("typical_dataset_size", max(DEFAULT_BSM_CONFIG["train_sizes"]))
+        bsm_loss_table = _loss_table(
+            bsm_data[bsm_data["mass_a"] == "30"], model_order=DEFAULT_BSM_CONFIG["models"]
+        )
+        bsm_pair_tables = [
+            _scatter_table(
+                bsm_data[bsm_data["mass_a"] == "30"],
+                metric=DEFAULT_BSM_CONFIG["pair_scatter"]["metric"],
+                train_sizes=DEFAULT_BSM_CONFIG["train_sizes"],
+                model_order=DEFAULT_BSM_CONFIG["models"],
+                head_order=DEFAULT_BSM_CONFIG.get("heads"),
+            ),
+            _bar_table(
+                bsm_data[bsm_data["mass_a"] == "30"],
+                metric=DEFAULT_BSM_CONFIG["pair_bar"]["metric"],
+                model_order=DEFAULT_BSM_CONFIG["models"],
+                head_order=DEFAULT_BSM_CONFIG.get("pair_heads") or [None],
+                train_size_for_bar=bsm_pair_bar_size,
+            ),
+        ]
         bsm_plots = [
             {"src": str(Path(bsm_outputs["legend"]).relative_to(output_dir)), "caption": "BSM legend"},
             *[
-                {"src": str(Path(path).relative_to(output_dir)), "caption": f"BSM: loss panel {i + 1}"}
+                {
+                    "src": str(Path(path).relative_to(output_dir)),
+                    "caption": f"BSM: loss panel {i + 1}",
+                    "table": bsm_loss_table,
+                }
                 for i, path in enumerate(bsm_outputs["loss"])
             ],
             *[
-                {"src": str(Path(path).relative_to(output_dir)), "caption": f"BSM: pairing panel {i + 1}"}
+                {
+                    "src": str(Path(path).relative_to(output_dir)),
+                    "caption": f"BSM: pairing panel {i + 1}",
+                    "table": bsm_pair_tables[i],
+                }
                 for i, path in enumerate(bsm_outputs["pair"])
             ],
             *[
-                {"src": str(Path(path).relative_to(output_dir)), "caption": f"BSM: SIC panel {i + 1}"}
+                {
+                    "src": str(Path(path).relative_to(output_dir)),
+                    "caption": f"BSM: SIC panel {i + 1}",
+                    "table": None,
+                }
                 for i, path in enumerate(bsm_outputs["sic"])
             ],
         ]
@@ -236,13 +533,23 @@ def main():
             file_format=args.format,
             dpi=args.dpi,
         )
+        ad_sig_table = _ad_significance_table(ad_data["sig"])
+        ad_gen_table = _ad_generation_table(ad_data["gen"], models_order=DEFAULT_AD_CONFIG["models"])
         ad_plots = [
             *[
-                {"src": str(Path(path).relative_to(output_dir)), "caption": "AD: median significance by channel"}
+                {
+                    "src": str(Path(path).relative_to(output_dir)),
+                    "caption": "AD: median significance by channel",
+                    "table": ad_sig_table,
+                }
                 for path in ad_outputs["sig"]
             ],
             *[
-                {"src": str(Path(path).relative_to(output_dir)), "caption": "AD: generative calibration and MMD"}
+                {
+                    "src": str(Path(path).relative_to(output_dir)),
+                    "caption": "AD: generative calibration and MMD",
+                    "table": ad_gen_table,
+                }
                 for path in ad_outputs["gen"]
             ],
         ]
