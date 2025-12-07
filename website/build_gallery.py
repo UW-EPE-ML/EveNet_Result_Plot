@@ -38,6 +38,7 @@ from paper_plot import (  # noqa: E402  # pylint: disable=wrong-import-position
     plot_bsm_results_webpage,
     plot_qe_results_webpage,
 )
+from plot_styles.sic import compute_sic_with_unc  # noqa: E402  # pylint: disable=wrong-import-position
 
 
 def _render_index(output_dir: Path, sections: List[Dict[str, object]]) -> None:
@@ -83,23 +84,49 @@ def _render_index(output_dir: Path, sections: List[Dict[str, object]]) -> None:
     section {{ margin-bottom: 2rem; }}
     .grid {{
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
       gap: 1rem;
-      align-items: start;
+      align-items: stretch;
     }}
     figure {{
       background: rgba(255, 255, 255, 0.04);
       border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: 8px;
-      padding: 0.5rem;
+      padding: 0.75rem;
       margin: 0;
       box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      height: 100%;
     }}
-    figure .table-container {{
-      overflow-x: auto;
-      margin-top: 0.35rem;
-      border-top: 1px solid rgba(255, 255, 255, 0.1);
-      padding-top: 0.35rem;
+    figure .content-row {{
+      display: flex;
+      gap: 0.75rem;
+      align-items: flex-start;
+      flex: 1 1 auto;
+    }}
+    figure .content-row .media {{
+      flex: 1 1 55%;
+      min-width: 0;
+    }}
+    figure .content-row .table-container {{
+      flex: 1 1 45%;
+      overflow: auto;
+      max-height: 380px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 6px;
+      padding: 0.35rem;
+      background: rgba(255, 255, 255, 0.02);
+    }}
+    @media (max-width: 768px) {{
+      figure .content-row {{
+        flex-direction: column;
+      }}
+      figure .content-row .table-container {{
+        width: 100%;
+        max-height: none;
+      }}
     }}
     table.data-table {{
       width: 100%;
@@ -200,13 +227,15 @@ def _render_plot_card(plot: Dict[str, object]) -> str:
     table_html = _render_table(plot.get("table"))
     caption = plot.get("caption", "")
     image_html = "" if plot.get("no_image") else (
-        f"<img src=\"{plot['src']}\" alt=\"{caption}\" loading=\"lazy\">"
+        f"<div class=\"media\"><img src=\"{plot['src']}\" alt=\"{caption}\" loading=\"lazy\"></div>"
     )
+    body_html = image_html
+    if table_html:
+        body_html = f"<div class=\"content-row\">{image_html}{table_html}</div>"
     return (
         "<figure>"
-        f"{image_html}"
+        f"{body_html}"
         f"<figcaption>{caption}</figcaption>"
-        f"{table_html}"
         "</figure>"
     )
 
@@ -246,6 +275,86 @@ def _scatter_table(
                     }
                 )
     headers = ["model"] + (["head"] if head_order else []) + ["train_size", metric, "error"]
+    return _table_from_dicts(rows, header_order=headers)
+
+
+def _sic_scatter_table(
+    df,
+    *,
+    model_order: List[str],
+    train_sizes: List[int],
+    head_order: List[str] | None,
+) -> Dict[str, object] | None:
+    rows = []
+    heads = head_order or [None]
+    for model in model_order:
+        df_model = df[df["model"] == model]
+        if df_model.empty:
+            continue
+        for head in heads:
+            df_head = df_model if head is None else df_model[df_model["head"] == head]
+            for train_size in train_sizes:
+                df_size = df_head[df_head["train_size"] == train_size]
+                if df_size.empty:
+                    continue
+                row = df_size.iloc[0]
+                TPR = np.asarray(row.get("TPR", []))
+                FPR = np.asarray(row.get("FPR", []))
+                if TPR.size == 0 or FPR.size == 0:
+                    continue
+                FPR_unc = np.asarray(row.get("FPR_unc", np.zeros_like(FPR)))
+                sic, sic_unc = compute_sic_with_unc(TPR, FPR, FPR_unc)
+                max_idx = int(np.argmax(sic))
+                rows.append(
+                    {
+                        "model": model,
+                        **({"head": head} if head_order else {}),
+                        "train_size": train_size,
+                        "sic": sic[max_idx],
+                        "error": sic_unc[max_idx],
+                    }
+                )
+    headers = ["model"] + (["head"] if head_order else []) + ["train_size", "sic", "error"]
+    return _table_from_dicts(rows, header_order=headers)
+
+
+def _sic_bar_table(
+    df,
+    *,
+    model_order: List[str],
+    train_sizes: List[int],
+    head_order: List[str] | None,
+    target_train_size: int,
+) -> Dict[str, object] | None:
+    rows = []
+    heads = head_order or [None]
+    for model in model_order:
+        df_model = df[df["model"] == model]
+        if df_model.empty:
+            continue
+        for head in heads:
+            df_head = df_model if head is None else df_model[df_model["head"] == head]
+            df_size = df_head[df_head["train_size"] == target_train_size]
+            if df_size.empty:
+                continue
+            row = df_size.iloc[0]
+            TPR = np.asarray(row.get("TPR", []))
+            FPR = np.asarray(row.get("FPR", []))
+            if TPR.size == 0 or FPR.size == 0:
+                continue
+            FPR_unc = np.asarray(row.get("FPR_unc", np.zeros_like(FPR)))
+            sic, sic_unc = compute_sic_with_unc(TPR, FPR, FPR_unc)
+            max_idx = int(np.argmax(sic))
+            rows.append(
+                {
+                    "model": model,
+                    **({"head": head} if head_order else {}),
+                    "train_size": target_train_size,
+                    "sic": sic[max_idx],
+                    "error": sic_unc[max_idx],
+                }
+            )
+    headers = ["model"] + (["head"] if head_order else []) + ["train_size", "sic", "error"]
     return _table_from_dicts(rows, header_order=headers)
 
 
@@ -470,6 +579,19 @@ def main():
         bsm_loss_table = _loss_table(
             bsm_data[bsm_data["mass_a"] == "30"], model_order=DEFAULT_BSM_CONFIG["models"]
         )
+        bsm_sic_bar_table = _sic_bar_table(
+            bsm_data[bsm_data["mass_a"] == "30"],
+            model_order=DEFAULT_BSM_CONFIG["models"],
+            train_sizes=DEFAULT_BSM_CONFIG["train_sizes"],
+            head_order=DEFAULT_BSM_CONFIG.get("heads"),
+            target_train_size=max(DEFAULT_BSM_CONFIG["train_sizes"]),
+        )
+        bsm_sic_scatter_table = _sic_scatter_table(
+            bsm_data[bsm_data["mass_a"] == "30"],
+            model_order=DEFAULT_BSM_CONFIG["models"],
+            train_sizes=DEFAULT_BSM_CONFIG["train_sizes"],
+            head_order=DEFAULT_BSM_CONFIG.get("heads"),
+        )
         bsm_pair_tables = [
             _scatter_table(
                 bsm_data[bsm_data["mass_a"] == "30"],
@@ -486,6 +608,7 @@ def main():
                 train_size_for_bar=bsm_pair_bar_size,
             ),
         ]
+        bsm_sic_tables = [None, bsm_sic_bar_table, bsm_sic_scatter_table]
         bsm_plots = [
             {"src": str(Path(bsm_outputs["legend"]).relative_to(output_dir)), "caption": "BSM legend"},
             *[
@@ -508,7 +631,7 @@ def main():
                 {
                     "src": str(Path(path).relative_to(output_dir)),
                     "caption": f"BSM: SIC panel {i + 1}",
-                    "table": None,
+                    "table": bsm_sic_tables[i],
                 }
                 for i, path in enumerate(bsm_outputs["sic"])
             ],
