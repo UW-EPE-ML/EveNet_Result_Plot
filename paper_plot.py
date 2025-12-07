@@ -178,12 +178,20 @@ DEFAULT_AD_CONFIG = {
         "style": PlotStyle(base_font_size=20.0, tick_label_size=19.0, legend_size=19.0),
         "fig_size": (13,6)
     },
-    "gen": {
-        "label_right": "calibration magnitude [%]",
-        "f_name": "ad_generation",
-        "y_min_left": 0.6,
-        "y_min_right": 0,
-        "save_individual_axes": True,
+    "gen_mmd": {
+        "metric": "mmd",
+        "label": "MMD",
+        "f_name": "ad_generation_mmd",
+        "fig_size": (6, 4),
+        "y_min": 0.6,
+    },
+    "gen_calibration": {
+        "metric": "mean_calibration_difference",
+        "label": "calibration magnitude [%]",
+        "f_name": "ad_generation_calibration",
+        "fig_size": (6, 4),
+        "y_min": 0,
+        "percentage": True,
     },
 }
 
@@ -1107,9 +1115,9 @@ def plot_ad_results(
 ):
     """Plot AD figures with optional per-figure font overrides.
 
-    Both ``sig`` and ``gen`` configs may provide a ``style`` entry to
-    override the base :class:`PlotStyle` for fine-grained control over
-    fonts or scaling in each plot.
+    ``sig``, ``gen_mmd``, and ``gen_calibration`` configs may provide a
+    ``style`` entry to override the base :class:`PlotStyle` for
+    fine-grained control over fonts or scaling in each plot.
     """
     cfg = _merge_configs(DEFAULT_AD_CONFIG, config)
 
@@ -1136,27 +1144,38 @@ def plot_ad_results(
         fig_size=cfg["sig"].get("fig_size", None),
     )
 
-    gen_style = _resolve_style(style, cfg["gen"].get("style"))
-    gen_scale = fig_scale if fig_scale is not None else (gen_style.figure_scale if gen_style else base_scale)
-    plot_ad_gen_summary(
-        data['gen'],
-        models_order=cfg["models"],
-        label_right=cfg["gen"].get("label_right", "calibration magnitude [%]"),
-        f_name=_with_ext(cfg["gen"].get("f_name", "ad_generation"), file_format),
-        plot_dir=plot_dir,
-        y_min_left=cfg["gen"].get("y_min_left", 0.6),
-        y_min_right=cfg["gen"].get("y_min_right", 0),
-        save_individual_axes=cfg["gen"].get("save_individual_axes", save_individual_axes),
-        dpi=dpi,
-        file_format=file_format,
-        style=gen_style,
-        fig_scale=gen_scale,
-        fig_aspect=fig_aspect,
-        in_figure=True,
-        figsize=cfg["gen"].get("fig_size", (12, 7)),
-    )
+    gen_outputs = []
+    for key in ["gen_mmd", "gen_calibration"]:
+        gen_cfg = cfg[key]
+        gen_style = _resolve_style(style, gen_cfg.get("style"))
+        gen_scale = fig_scale if fig_scale is not None else (gen_style.figure_scale if gen_style else base_scale)
 
-    pass
+        f_name = _with_ext(gen_cfg.get("f_name", key), file_format)
+        plot_ad_gen_summary(
+            data['gen'],
+            models_order=cfg["models"],
+            metric=gen_cfg.get("metric", "mmd"),
+            label=gen_cfg.get("label", ""),
+            f_name=f_name,
+            plot_dir=plot_dir,
+            y_min=gen_cfg.get("y_min"),
+            percentage=gen_cfg.get("percentage", False),
+            dpi=dpi,
+            file_format=file_format,
+            style=gen_style,
+            fig_scale=gen_scale,
+            fig_aspect=fig_aspect,
+            in_figure=True,
+            figsize=gen_cfg.get("fig_size"),
+            with_legend=gen_cfg.get("with_legend", True),
+        )
+        gen_outputs.append(os.path.join(plot_dir, f_name))
+
+    return {
+        "legend": None,
+        "sig": [os.path.join(plot_dir, _with_ext("ad_significance", file_format))],
+        "gen": gen_outputs,
+    }
 
 
 def plot_ad_results_webpage(
@@ -1171,7 +1190,7 @@ def plot_ad_results_webpage(
 ):
     plot_dir = os.path.join(output_root, "AD")
 
-    plot_ad_results(
+    outputs = plot_ad_results(
         data,
         output_root=output_root,
         file_format=file_format,
@@ -1182,11 +1201,7 @@ def plot_ad_results_webpage(
         fig_aspect=fig_aspect,
     )
 
-    return {
-        "legend": None,
-        "sig": [os.path.join(plot_dir, _with_ext("ad_significance", file_format))],
-        "gen": [os.path.join(plot_dir, _with_ext("ad_generation", file_format))],
-    }
+    return outputs
 
 
 def plot_final_paper_figures(

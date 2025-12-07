@@ -2,8 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import os
-from plot_styles.style import MODEL_COLORS, MODEL_PRETTY
-from plot_styles.utils import apply_nature_axis_style, plot_legend, save_axis
+from plot_styles.style import MODEL_COLORS
+from plot_styles.utils import apply_nature_axis_style, plot_legend
 from matplotlib.transforms import blended_transform_factory
 from plot_styles.core.theme import PlotStyle, scaled_fig_size, use_style
 
@@ -189,38 +189,29 @@ def plot_ad_sig_summary(
 def plot_ad_gen_summary(
         df,
         models_order=None,
-        metric_left="mmd",
-        metric_right="mean_calibration_difference",
+        metric="mmd",
         figsize=(10, 4),
         fig_scale: float = 1.0,
         fig_aspect: float | None = None,
-        label_left="MMD",
-        label_right=r"$\bar{\Delta}_{\rm calib}$",
-        y_min_left=None,
-        y_min_right=None,
+        label="MMD",
+        y_min=None,
         f_name=None,
         plot_dir="./",
         with_legend: bool = True,
-        save_individual_axes: bool = False,
         dpi: int | None = None,
         file_format: str | None = None,
         style: PlotStyle | None = None,
         in_figure: bool = True,
+        percentage: bool = False,
 ):
     """
-    Two-panel Nature-style bar plot for after-cut metrics.
+    Single-panel bar plot for an after-cut metric (e.g., MMD or calibration magnitude).
 
-    - Left panel: metric_left (e.g. "mmd")
-    - Right panel: metric_right (e.g. "mean_calibration_difference")
     - X-axis: OS / SS
     - Colors: model types (green/blue scheme)
     - Hatching: calibrated vs uncalibrated
     - Error bars: central 68% interval (16–84% quantiles)
     """
-
-    # -------------------------------------------------------
-    # Color scheme: green/blue for models
-    # -------------------------------------------------------
 
     detected = sorted(df["model"].unique())
     if models_order is not None:
@@ -230,10 +221,7 @@ def plot_ad_gen_summary(
 
     n_methods = len(model_list)
 
-    # -------------------------------------------------------
-    # Aggregation: central 68% interval (16–84%) per group
-    # -------------------------------------------------------
-    def agg(metric):
+    def agg(metric_name):
         result = {}
         for m in model_list:
             for cal in [False, True]:
@@ -243,7 +231,7 @@ def plot_ad_gen_summary(
                         (df["model"] == m) &
                         (df["calibrated"] == cal) &
                         (df["train_type"] == g)
-                        ][metric].dropna()
+                        ][metric_name].dropna()
 
                     if len(tmp) > 0:
                         q16, q50, q84 = np.nanpercentile(tmp, [16, 50, 84])
@@ -259,78 +247,67 @@ def plot_ad_gen_summary(
                 result[(m, cal)] = group_stats
         return result
 
-    left_data = agg(metric_left)
-    right_data = agg(metric_right)
+    metric_data = agg(metric)
 
-    # -------------------------------------------------------
-    # Plotting helpers
-    # -------------------------------------------------------
+    resolved_figsize = figsize or (10, 4)
     with use_style(style):
-        resolved_size = scaled_fig_size(figsize, scale=fig_scale, aspect_ratio=fig_aspect)
-        fig, axes = plt.subplots(1, 2, figsize=resolved_size, sharey=False)
+        resolved_size = scaled_fig_size(resolved_figsize, scale=fig_scale, aspect_ratio=fig_aspect)
+        fig, ax = plt.subplots(figsize=resolved_size)
 
-    def plot_panel(ax, metric_data, y_label, y_min=None, percentage=False):
-        x_groups = ["OS", "SS"]
-        n_bars = n_methods * 2
-        bar_width = 0.8 / n_bars
+    x_groups = ["OS", "SS"]
+    n_bars = n_methods * 2
+    total_width = 1.0
+    bar_width = total_width / n_bars
+    start_positions = np.arange(len(x_groups)) - total_width / 2 + bar_width / 2
 
-        for i, method in enumerate(model_list):
-            for j, cal in enumerate([False, True]):
-                centers = [
-                    metric_data[(method, cal)][0][0],
-                    metric_data[(method, cal)][1][0],
-                ]
-                err_lows = [
-                    metric_data[(method, cal)][0][1],
-                    metric_data[(method, cal)][1][1],
-                ]
-                err_highs = [
-                    metric_data[(method, cal)][0][2],
-                    metric_data[(method, cal)][1][2],
-                ]
+    for i, method in enumerate(model_list):
+        for j, cal in enumerate([False, True]):
+            centers = [
+                metric_data[(method, cal)][0][0],
+                metric_data[(method, cal)][1][0],
+            ]
+            err_lows = [
+                metric_data[(method, cal)][0][1],
+                metric_data[(method, cal)][1][1],
+            ]
+            err_highs = [
+                metric_data[(method, cal)][0][2],
+                metric_data[(method, cal)][1][2],
+            ]
 
-                if percentage:
-                    centers = [100 * n for n in centers]
-                    err_lows = [100 * n for n in err_lows]
-                    err_highs = [100 * n for n in err_highs]
+            if percentage:
+                centers = [100 * n for n in centers]
+                err_lows = [100 * n for n in err_lows]
+                err_highs = [100 * n for n in err_highs]
 
-                xpos = (
-                        np.arange(2)
-                        + (i * 2 + j - n_bars / 2 + 0.5) * bar_width
-                )
+            xpos = start_positions + (i * 2 + j) * bar_width
 
-                color = MODEL_COLORS[method]
-                hatch = None if cal else "//"
-                fill_color = color if cal else sns.light_palette(color, 3)[1]
+            color = MODEL_COLORS[method]
+            hatch = None if cal else "//"
+            fill_color = color if cal else sns.light_palette(color, 3)[1]
 
-                yerr = np.array([err_lows, err_highs])
+            yerr = np.array([err_lows, err_highs])
 
-                ax.bar(
-                    xpos,
-                    centers,
-                    width=bar_width,
-                    yerr=yerr,
-                    capsize=3,
-                    color=fill_color,
-                    edgecolor="black",
-                    hatch=hatch,
-                    linewidth=0.8,
-                )
+            ax.bar(
+                xpos,
+                centers,
+                width=bar_width,
+                yerr=yerr,
+                capsize=3,
+                color=fill_color,
+                edgecolor="black",
+                hatch=hatch,
+                linewidth=0.8,
+            )
 
-        ax.set_xticks(np.arange(2))
-        ax.set_xticklabels(x_groups)
-        ax.set_ylabel(y_label)
-        apply_nature_axis_style(ax, style=style)
-        if y_min is not None:
-            ymin, ymax = ax.get_ylim()
-            ax.set_ylim(bottom=y_min, top=max(ymax, y_min))
-        sns.despine(ax=ax)
-
-    # Left panel
-    plot_panel(axes[0], left_data, label_left, y_min=y_min_left)
-
-    # Right panel
-    plot_panel(axes[1], right_data, label_right, y_min=y_min_right, percentage=True)
+    ax.set_xticks(np.arange(2))
+    ax.set_xticklabels(x_groups)
+    ax.set_ylabel(label)
+    apply_nature_axis_style(ax, style=style)
+    if y_min is not None:
+        ymin, ymax = ax.get_ylim()
+        ax.set_ylim(bottom=y_min, top=max(ymax, y_min))
+    sns.despine(ax=ax)
 
     def _with_ext(name: str) -> str:
         root, ext = os.path.splitext(name)
@@ -340,23 +317,6 @@ def plot_ad_gen_summary(
             return f"{root}.{file_format}"
         return f"{root}.pdf"
 
-    if save_individual_axes:
-        save_axis(
-            axes[0],
-            plot_dir,
-            f_name=_with_ext(f"ad_gen_{metric_left}"),
-            dpi=dpi,
-        )
-        save_axis(
-            axes[1],
-            plot_dir,
-            f_name=_with_ext(f"ad_gen_{metric_right}"),
-            dpi=dpi,
-        )
-
-    # -------------------------------------------------------
-    # Legend
-    # -------------------------------------------------------
     if with_legend:
         plot_legend(
             fig,
