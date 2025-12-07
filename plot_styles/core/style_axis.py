@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import Optional
 import os
 import matplotlib.pyplot as plt
+from matplotlib.ticker import MaxNLocator
 
 from plot_styles.core.theme import PlotStyle
 
@@ -30,16 +31,24 @@ def apply_nature_axis_style(ax, *, style: PlotStyle | None = None):
 
     # Remove grid lines and hide top/right spines
     ax.grid(False)
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
 
-    # Emphasize left/bottom spines
-    ax.spines['left'].set_visible(True)
-    ax.spines['bottom'].set_visible(True)
-    ax.spines['left'].set_linewidth(1.2)
-    ax.spines['bottom'].set_linewidth(1.2)
-    ax.spines['left'].set_color("black")
-    ax.spines['bottom'].set_color("black")
+    if style is not None and not style.full_axis:
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+
+        # Emphasize left/bottom spines
+        ax.spines['left'].set_visible(True)
+        ax.spines['bottom'].set_visible(True)
+        ax.spines['left'].set_linewidth(1.5)
+        ax.spines['bottom'].set_linewidth(1.5)
+        ax.spines['left'].set_color("black")
+        ax.spines['bottom'].set_color("black")
+    else:
+        for pos in ['top', 'right', 'bottom', 'left']:
+            ax.spines[pos].set_visible(True)
+            ax.spines[pos].set_linewidth(1.5)
+            ax.spines[pos].set_facecolor("white")
+            ax.spines[pos].set_edgecolor("black")
 
     # Ticks: outward facing, modest sizing
     ax.tick_params(
@@ -47,7 +56,7 @@ def apply_nature_axis_style(ax, *, style: PlotStyle | None = None):
         which='major',
         direction='out',
         length=5 * scale,
-        width=1.0 * scale,
+        width=1.5 * scale,
         labelsize=tick_size,
         pad=3 * scale,
         bottom=True,
@@ -59,6 +68,9 @@ def apply_nature_axis_style(ax, *, style: PlotStyle | None = None):
     label_pad = 4 * scale
     ax.xaxis.labelpad = label_pad
     ax.yaxis.labelpad = label_pad
+
+    if style is not None and style.nbins is not None:
+        ax.yaxis.set_major_locator(MaxNLocator(nbins=style.nbins))
 
 
 def style_axis_basic(
@@ -112,7 +124,7 @@ def style_axis_basic(
         ax.grid(True, which="both", linestyle="--", linewidth=0.5, alpha=0.7)
 
     if x_indicator is not None:
-        ax.axvline(x=x_indicator, color="gray", linestyle="--", linewidth=1.5, alpha=0.7)
+        ax.axvline(x=x_indicator, color="gray", linestyle="--", linewidth=2.0, alpha=0.7)
         if x_indicator_text_config:
             ax.text(
                 x_indicator * x_indicator_text_config.get("fraction_x", 0.95),
@@ -123,7 +135,7 @@ def style_axis_basic(
                 ha=x_indicator_text_config.get("ha", "right"),
             )
     if y_indicator is not None:
-        ax.axhline(y=y_indicator, color="gray", linestyle="--", linewidth=1.5, alpha=0.7)
+        ax.axhline(y=y_indicator, color="gray", linestyle="--", linewidth=2.0, alpha=0.7)
         if y_indicator_text_config:
             ax.text(
                 y_indicator_text_config.get("fraction_x", 0.025),

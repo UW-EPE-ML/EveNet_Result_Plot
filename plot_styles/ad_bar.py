@@ -39,6 +39,7 @@ def plot_ad_sig_summary(
         dpi: int | None = None,
         file_format: str | None = None,
         style: PlotStyle | None = None,
+        in_figure: bool = True,
 ):
     # Which models appear?
     detected = sorted(df["model"].unique())
@@ -149,7 +150,7 @@ def plot_ad_sig_summary(
             x_ref * 1.05,
             y_ref * 0.98,
             f"Reference Significance: {y_ref:.1f}$\\sigma$",
-            fontsize=12,
+            fontsize=19,
             color="gray",
             transform=trans,
         )
@@ -164,9 +165,11 @@ def plot_ad_sig_summary(
             model_colors=MODEL_COLORS,
             legends=["calibration", "models"],
             style=style,
+            in_figure=True,
         )
 
     plt.tight_layout(rect=(0.0, 0.0, 1.0, 0.95))
+
     def _with_ext(name: str) -> str:
         root, ext = os.path.splitext(name)
         if ext:
@@ -202,6 +205,7 @@ def plot_ad_gen_summary(
         dpi: int | None = None,
         file_format: str | None = None,
         style: PlotStyle | None = None,
+        in_figure: bool = True,
 ):
     """
     Two-panel Nature-style bar plot for after-cut metrics.
@@ -360,6 +364,7 @@ def plot_ad_gen_summary(
             model_colors=MODEL_COLORS,
             legends=["calibration", "models"],
             style=style,
+            in_figure=in_figure,
         )
 
     plt.tight_layout(rect=(0.0, 0.0, 1.0, 0.95))

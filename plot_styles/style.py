@@ -8,19 +8,19 @@
 # }
 
 # MODEL_COLORS = {
-#     "SSL":     "#4C72B0",   # muted blue
-#     "Nominal": "#DD8452",   # muted orange
-#     "Scratch": "#55A868",   # soft green
-#     "Ablation": "#C44E52",  # muted red
+#     "SSL":     "#784A71",   # muted blue
+#     "Nominal": "#599AB9",   # muted orange
+#     "Scratch": "#CA9B22",   # soft green
+#     "Ablation": "#FF7F0E",  # muted red
 #     "Ref.":    "#817F85",   # neutral grey
 #     "SPANet":  "#817F85",   # same as Ref.
 # }
 
 MODEL_COLORS = {
-    "SSL":      "#6BAF8C",   # distinct muted teal-green (large separation)
-    "Nominal":  "#7CA2C3",   # fixed
+    "SSL":      "#EDA4A1",   # distinct muted teal-green (large separation)
+    "Nominal":  "#5F8FD9",   # fixed
     "Ablation": "#3E5F78",   # darker blue-grey for strong contrast
-    "Scratch":  "#D7A46F",   # fixed
+    "Scratch":  "#E3C565",   # fixed
     "Ref.":     "#9A9A9A",   # neutral grey
     "SPANet":   "#9A9A9A",   # same grey for grouping
 }
@@ -43,9 +43,9 @@ QE_DATASET_MARKERS = {
 
 QE_DATASET_PRETTY = {
     '15': "1%",
-    '148': "50%",
-    '1475': "100%",
-    '2950': "200%",
+    '148': "15%",
+    '1475': "150%",
+    '2950': "300%",
 }
 
 BSM_DATASET_MARKERS = {
@@ -57,11 +57,11 @@ BSM_DATASET_MARKERS = {
 }
 
 BSM_DATASET_PRETTY = {
-    '10': "10%",
-    '30': "30%",
-    '100': "100%",
-    '300': "300%",
-    '1000': "1000%",
+    '10': "4%",
+    '30': "12%",
+    '100': "40%",
+    '300': "120%",
+    '1000': "400%",
 }
 
 HEAD_LINESTYLES = {

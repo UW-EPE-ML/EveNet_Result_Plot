@@ -29,7 +29,7 @@ def compute_sic_with_unc(TPR, FPR, FPR_unc):
     return SIC, SIC_unc
 
 
-def _collect_sic_data(data_df, model_order, train_sizes, head_order, style: PlotStyle | None = None):
+def _collect_sic_data(data_df, model_order, train_sizes, head_order):
     grouped_val = defaultdict(lambda: defaultdict(lambda: defaultdict(float)))  # head → model → max SIC
     grouped_err = defaultdict(lambda: defaultdict(lambda: defaultdict(float)))  # head → model → max SIC uncertainty
     curve_traces = defaultdict(list)  # head -> list[(TPR, SIC, SIC_unc, model)]
@@ -77,7 +77,7 @@ def _draw_sic_curve(ax_curve, curve_traces, head_order, style: PlotStyle | None 
                 SIC_smooth,
                 color=MODEL_COLORS[model],
                 linestyle=HEAD_LINESTYLES.get(head, "-"),
-                linewidth=2 * (style.object_scale if style else 1.0),
+                linewidth=3 * (style.object_scale if style else 1.0),
             )
 
             if head == "Cls":
@@ -161,7 +161,7 @@ def _draw_sic_scatter(
                 ys,
                 color=MODEL_COLORS.get(model),
                 linestyle=HEAD_LINESTYLES.get(head, "-"),
-                linewidth=2 * (style.object_scale if style else 1.0),
+                linewidth=3 * (style.object_scale if style else 1.0),
                 alpha=0.9,
             )
 
@@ -183,7 +183,7 @@ def _draw_sic_scatter(
                 ax_scatter.fill_between(xs, lower, upper, color=MODEL_COLORS[model], alpha=0.18)
 
     if x_indicator:
-        ax_scatter.axvline(x=x_indicator, color="gray", linestyle="--", linewidth=1.5, alpha=0.7)
+        ax_scatter.axvline(x=x_indicator, color="gray", linestyle="--", linewidth=2, alpha=0.7)
         trans = blended_transform_factory(ax_scatter.transData, ax_scatter.transAxes)
         if x_indicator_text_config:
             ax_scatter.text(
@@ -197,21 +197,27 @@ def _draw_sic_scatter(
             )
 
 
-def _style_sic_axes(ax_curve, ax_bar, ax_scatter, head_order, *, y_min=None, style: PlotStyle | None = None):
+def _style_sic_axes(
+        ax_curve, ax_bar, ax_scatter, head_order, *, y_min=None, y_max=None,
+        bar_style: PlotStyle | None = None,
+        scatter_style: PlotStyle | None = None,
+        curve_style: PlotStyle | None = None,
+
+):
     ax_curve.set_xlabel("Signal efficiency")
     ax_curve.set_ylabel(r"SIC = $\epsilon_{\rm sig} / \sqrt{\epsilon_{\rm bkg}}$")
     ax_curve.grid(True, linestyle="--", alpha=0.5)
-    apply_nature_axis_style(ax_curve, style=style)
+    apply_nature_axis_style(ax_curve, style=curve_style)
 
-    ax_bar.set_ylabel("Max SIC")
+    # ax_bar.set_ylabel("Max SIC")
     ax_bar.grid(True, axis="y", linestyle="--", alpha=0.5)
-    apply_nature_axis_style(ax_bar, style=style)
+    apply_nature_axis_style(ax_bar, style=bar_style)
 
     ax_scatter.set_xscale("log")
-    ax_scatter.set_xlabel("Dataset Size")
+    ax_scatter.set_xlabel("Train Size [K]")
     ax_scatter.grid(True, linestyle="--", linewidth=0.5, alpha=0.7)
     ax_scatter.set_ylabel("Max SIC")
-    apply_nature_axis_style(ax_scatter, style=style)
+    apply_nature_axis_style(ax_scatter, style=scatter_style)
 
     if y_min is not None:
         if isinstance(y_min, list) or len(y_min) == 3:
@@ -222,6 +228,15 @@ def _style_sic_axes(ax_curve, ax_bar, ax_scatter, head_order, *, y_min=None, sty
             ax_curve.set_ylim(bottom=y_min)
             ax_bar.set_ylim(bottom=y_min)
             ax_scatter.set_ylim(bottom=y_min)
+    if y_max is not None:
+        if isinstance(y_max, list) or len(y_max) == 3:
+            ax_curve.set_ylim(top=y_max[0])
+            ax_bar.set_ylim(top=y_max[1])
+            ax_scatter.set_ylim(top=y_max[2])
+        else:
+            ax_curve.set_ylim(top=y_max)
+            ax_bar.set_ylim(top=y_max)
+            ax_scatter.set_ylim(top=y_max)
 
 
 def sic_plot(
@@ -245,7 +260,7 @@ def sic_plot(
         style: PlotStyle | None = None,
 ):
     curve_traces, grouped_val, grouped_err, active_models = _collect_sic_data(
-        data_df, model_order, train_sizes, head_order, style
+        data_df, model_order, train_sizes, head_order
     )
 
     with use_style(style):
@@ -334,6 +349,7 @@ def sic_plot_individual(
         head_order,
         *,
         y_min=None,
+        y_max=None,
         x_indicator=None,
         x_indicator_text_config=None,
         fig_size_curve=(7, 6),
@@ -341,22 +357,28 @@ def sic_plot_individual(
         fig_size_scatter=(7, 6),
         fig_scale: float = 1.0,
         fig_aspect: float | None = None,
-        style: PlotStyle | None = None,
+        bar_style: PlotStyle | None = None,
+        scatter_style: PlotStyle | None = None,
+        curve_style: PlotStyle | None = None,
 ):
     curve_traces, grouped_val, grouped_err, active_models = _collect_sic_data(
-        data_df, model_order, train_sizes, head_order, style
+        data_df, model_order, train_sizes, head_order
     )
 
-    with use_style(style):
+    with use_style(curve_style):
         curve_size = scaled_fig_size(fig_size_curve, scale=fig_scale, aspect_ratio=fig_aspect)
-        bar_size = scaled_fig_size(fig_size_bar, scale=fig_scale, aspect_ratio=fig_aspect)
-        scatter_size = scaled_fig_size(fig_size_scatter, scale=fig_scale, aspect_ratio=fig_aspect)
         fig_curve, ax_curve = plt.subplots(figsize=curve_size)
+
+    with use_style(bar_style):
+        bar_size = scaled_fig_size(fig_size_bar, scale=fig_scale, aspect_ratio=fig_aspect)
         fig_bar, ax_bar = plt.subplots(figsize=bar_size)
+
+    with use_style(scatter_style):
+        scatter_size = scaled_fig_size(fig_size_scatter, scale=fig_scale, aspect_ratio=fig_aspect)
         fig_scatter, ax_scatter = plt.subplots(figsize=scatter_size)
 
-    _draw_sic_curve(ax_curve, curve_traces, head_order, style)
-    _draw_sic_bar(ax_bar, grouped_val, grouped_err, model_order, head_order, train_sizes, style)
+    _draw_sic_curve(ax_curve, curve_traces, head_order, curve_style)
+    _draw_sic_bar(ax_bar, grouped_val, grouped_err, model_order, head_order, train_sizes, bar_style)
     _draw_sic_scatter(
         ax_scatter,
         grouped_val,
@@ -365,12 +387,15 @@ def sic_plot_individual(
         head_order,
         train_sizes,
         dataset_markers,
-        style,
+        scatter_style,
         x_indicator=x_indicator,
         x_indicator_text_config=x_indicator_text_config,
     )
 
-    _style_sic_axes(ax_curve, ax_bar, ax_scatter, head_order, y_min=y_min, style=style)
+    _style_sic_axes(
+        ax_curve, ax_bar, ax_scatter, head_order, y_min=y_min, y_max=y_max,
+        bar_style=bar_style, curve_style=curve_style, scatter_style=scatter_style,
+    )
 
     return {
         "curve": (fig_curve, ax_curve),

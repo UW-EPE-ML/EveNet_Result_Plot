@@ -18,16 +18,16 @@ DEFAULT_BAR_KWARGS = {
 
 
 def plot_model_bars(
-    ax,
-    df: pd.DataFrame,
-    *,
-    metric: str,
-    model_order: Sequence[str],
-    head_order: Sequence[str],
-    train_size_for_bar: int,
-    bar_width: Optional[float] = None,
-    y_unc_suffix: str = "_unc",
-    bar_kwargs: Optional[dict] = None,
+        ax,
+        df: pd.DataFrame,
+        *,
+        metric: str,
+        model_order: Sequence[str],
+        head_order: Sequence[str],
+        train_size_for_bar: int,
+        bar_width: Optional[float] = None,
+        y_unc_suffix: str = "_unc",
+        bar_kwargs: Optional[dict] = None,
 ) -> List[str]:
     """Plot grouped bars for each model/head at a fixed train size."""
     active_models = []
@@ -54,7 +54,8 @@ def plot_model_bars(
                 df_head = df_head.sort_values(metric)
                 y_val = df_head[metric].iloc[-1]
                 y_unc_col = f"{metric}{y_unc_suffix}"
-                y_unc = df_head[y_unc_col].iloc[-1] if y_unc_col in df_head.columns else None
+                # y_unc = df_head[y_unc_col].iloc[-1] if y_unc_col in df_head.columns else None
+                y_unc = None
 
             if y_val is None:
                 continue
@@ -81,7 +82,7 @@ def plot_model_bars(
         active_models.append(model)
 
     ordered_active = [m for m in model_order if m in set(active_models)]
-    if head_order == [None]:
+    if head_order == [None] or len(head_order) == 1:
         ax.set_xticks([])
     else:
         ax.set_xticks(indices)

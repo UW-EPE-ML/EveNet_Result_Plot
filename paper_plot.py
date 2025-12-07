@@ -15,111 +15,154 @@ from plot_styles.style import MODEL_COLORS, HEAD_LINESTYLES
 
 BITMAP_FORMATS = {"png", "jpg", "jpeg", "tiff", "bmp"}
 
+DEFAULT_LEGEND_STYLE = PlotStyle(legend_size=12.0)
+DEFAULT_BAR_STYLE = PlotStyle(tick_label_size=19.0, nbins=2, full_axis=True)
+DEFAULT_STYLE = PlotStyle(base_font_size=20.0, tick_label_size=19.0)
+
 DEFAULT_QE_CONFIG = {
     # "train_sizes": [15, 148, 1475, 2950],
     "train_sizes": [15, 148, 1475],
-    "models": ["Nominal", "Scratch", "SSL"],
+    "models": ["Nominal", "SSL", "Scratch"],
     "heads": [],
-    "legend": {"legends": ["dataset", "heads", "models"]},
-    "loss": {"fig_size": (6, 6), "grid": False, "y_min": 0.82},
+    "legend": {
+        "legends": ["dataset", "heads", "models"],
+        "fig_size": (5, 0.75),
+        "style": DEFAULT_LEGEND_STYLE,
+    },
+    "loss": {
+        "fig_size": (6, 6), "grid": False, "y_min": 0.82,
+        "style": DEFAULT_STYLE,
+    },
     "pair_scatter": {
-        "fig_size": (7, 6),
+        "fig_size": (7.5, 6),
         "metric": "pairing",
         "y_label": "Pairing Efficiency [%]",
         "x_label": "Train Size [K]",
         "y_min": 20.0,
+        'y_max': 89,
         "logx": True,
         "x_indicator": 1e3,
-        "x_indicator_text_config": dict(
-            fraction_x=0.95,
-            fraction_y=21.5,
-            fmt="Typical SM dataset: 1M events",
-            fontsize=12,
-            color="gray",
-            ha="right",
-        )
+        # "x_indicator_text_config": dict(
+        #     fraction_x=0.95,
+        #     fraction_y=21.5,
+        #     fmt="Typical SM dataset: 1M events",
+        #     fontsize=19,
+        #     color="gray",
+        #     ha="right",
+        # ),
+        "style": DEFAULT_STYLE,
     },
     "pair_bar": {
         "fig_size": (4, 3.5),
         "metric": "pairing",
         # "y_label": "Pairing Efficiency [%]",
-        "y_min": 78.0,
+        "y_min": 81.0,
+        "y_max": 83.0,
+        "style": DEFAULT_BAR_STYLE,
     },
     "delta_scatter": {
+        "fig_size": (7.5, 6),
         "metric": "deltaD",
         "y_label": r"precision on D [%]",
         "x_label": "Train Size [K]",
-        "y_max": 6.0,
+        "y_max": 6.1,
         "y_min": 1.0,
         "logx": True,
         "x_indicator": 1e3,
-        "x_indicator_text_config": dict(
-            fraction_x=0.95,
-            fraction_y=1.1,
-            fmt="Typical SM dataset: 1M events",
-            fontsize=12,
-            color="gray",
-            ha="right",
-        ),
+        # "x_indicator_text_config": dict(
+        #     fraction_x=0.95,
+        #     fraction_y=1.15,
+        #     fmt="Typical SM dataset: 1M events",
+        #     fontsize=19,
+        #     color="gray",
+        #     ha="right",
+        # ),
         "y_indicator": 5.3,
         "y_indicator_text_config": dict(
-            fraction_x=15,
-            fraction_y=1.01,
-            fmt=r"Reference Significance: 5.3$\sigma$",
-            fontsize=12,
+            fraction_x=35,
+            fraction_y=1.02,
+            fmt=r"Reference precision: 5.3%",
+            fontsize=19,
             color="gray",
             ha="left",
-        )
+        ),
+        "style": DEFAULT_STYLE,
     },
     "delta_bar": {
+        "fig_size": (4, 3.5),
         "metric": "deltaD",
-        "y_label": r"precision on D [%]",
+        # "y_label": r"precision on D [%]",
+        "y_min": 1.5,
+        "y_max": 1.7,
+        "style": DEFAULT_BAR_STYLE,
     },
 }
 
 DEFAULT_BSM_CONFIG = {
     "train_sizes": [10, 30, 100, 300],
-    "typical_dataset_size": 100,
-    "models": ["Nominal", "Scratch", "SSL", "SPANet"],
+    "typical_dataset_size": 300,
+    "models": ["Nominal", "SSL", "Scratch",  "SPANet"],
     "heads": ["Cls", "Cls+Asn"],
-    "legend": {"legends": ["dataset", "heads", "models"]},
-    "loss": {"fig_size": (7, 6), "grid": False},
+    "pair_heads": ["Cls+Asn"],
+    "legend": {
+        "legends": ["dataset", "heads", "models"],
+        "fig_size": (6.5, 1.2),
+        "style": DEFAULT_LEGEND_STYLE,
+    },
+    "loss": {
+        "fig_size": (6, 6), "grid": False,
+        "style": PlotStyle(base_font_size=20.0, tick_label_size=19.0)
+    },
     "pair_scatter": {
+        "fig_size": (7.5, 6),
         "metric": "pairing",
         "y_label": "Pairing Efficiency [%]",
         "x_label": "Train Size [K]",
-        "y_min": 20.0,
+        "y_min": 0.0,
         "logx": True,
-        "x_indicator": 100,
-        "x_indicator_text_config": dict(
-            fraction_x=0.95,
-            fraction_y=20.75,
-            fmt="Typical BSM dataset: 100K events",
-            fontsize=12,
-            color="gray",
-            ha="right",
-        )
+        "x_indicator": 250,
+        # "x_indicator_text_config": dict(
+        #     fraction_x=0.95,
+        #     fraction_y=20.75,
+        #     fmt="Typical BSM dataset: 100K events",
+        #     fontsize=19,
+        #     color="gray",
+        #     ha="right",
+        # ),
+        "style": DEFAULT_STYLE,
     },
     "pair_bar": {
+        "fig_size": (4, 3.5),
         "metric": "pairing",
-        "y_label": "Pairing Efficiency [%]",
+        # "y_label": "Pairing Efficiency [%]",
+        "y_min": 65.0,
+        "y_max": 81.0,
+        "style": DEFAULT_BAR_STYLE,
     },
     "sic": {
-        "x_indicator": 100,
-        "x_indicator_text_config": dict(
-            fraction_x=0.95,
-            fraction_y=0.020,
-            fmt="Typical BSM dataset: 100K events",
-            fontsize=12,
-            color="gray",
-            ha="right",
-        ),
+        "x_indicator": 250,
+        # "x_indicator_text_config": dict(
+        #     fraction_x=0.95,
+        #     fraction_y=0.020,
+        #     fmt="Typical BSM dataset: 100K events",
+        #     fontsize=19,
+        #     color="gray",
+        #     ha="right",
+        # ),
         "y_min": [0, 0, 0.75],
+        "y_max": [5.5, 5.5, 6.5],
+        "style": DEFAULT_STYLE,
+        "fig_size_bar": (4, 3.5),
+        "fig_size_scatter": (7.5, 6),
+        "fig_size_curve": (7.5, 6),
+        "bar_style": DEFAULT_BAR_STYLE,
+        "scatter_style": DEFAULT_STYLE,
+        "curve_style": DEFAULT_STYLE,
     },
 }
 
 DEFAULT_AD_CONFIG = {
-    "models": ["Nominal", "Scratch", "SSL"],
+    "models": ["Nominal", "SSL", "Scratch"],
     "heads": [],
     "sig": {
         "channels_order": [
@@ -132,6 +175,8 @@ DEFAULT_AD_CONFIG = {
         "var": "median",
         "y_ref": 6.4,
         "f_name": "ad_significance",
+        "style": PlotStyle(base_font_size=20.0, tick_label_size=19.0, legend_size=19.0),
+        "fig_size": (13,6)
     },
     "gen": {
         "label_right": "calibration magnitude [%]",
@@ -243,7 +288,7 @@ def plot_task_legend(
 
     os.makedirs(plot_dir, exist_ok=True)
     legend_path = os.path.join(plot_dir, _with_ext(f_name, file_format))
-    fig.savefig(legend_path, bbox_inches="tight", **_save_kwargs(file_format, dpi))
+    fig.savefig(legend_path, **_save_kwargs(file_format, dpi))
     return legend_path
 
 
@@ -316,7 +361,6 @@ def plot_qe_results(
             dataset_markers=QE_DATASET_MARKERS,
             dataset_pretty=QE_DATASET_PRETTY,
             **cfg["loss"],
-            style=loss_style,
             fig_scale=loss_scale,
             fig_aspect=fig_aspect,
         )
@@ -349,7 +393,8 @@ def plot_qe_results(
     pair_bar_size = bar_train_size or max(cfg["train_sizes"])
     pair_scatter_cfg = cfg["pair_scatter"]
     pair_scatter_style = _resolve_style(style, pair_scatter_cfg.get("style"))
-    pair_scatter_scale = fig_scale if fig_scale is not None else (pair_scatter_style.figure_scale if pair_scatter_style else base_scale)
+    pair_scatter_scale = fig_scale if fig_scale is not None else (
+        pair_scatter_style.figure_scale if pair_scatter_style else base_scale)
     fig_pair_scatter, ax_pair_scatter, active_pair = plot_metric_scatter(
         data,
         metric=pair_scatter_cfg.get("metric", "pairing"),
@@ -361,7 +406,6 @@ def plot_qe_results(
         **{k: v for k, v in pair_scatter_cfg.items() if k not in {"metric"}},
         fig_scale=pair_scatter_scale,
         fig_aspect=fig_aspect,
-        style=pair_scatter_style,
     )
     if with_legend:
         plot_legend(
@@ -383,7 +427,8 @@ def plot_qe_results(
     )
 
     pair_bar_style = _resolve_style(style, cfg["pair_bar"].get("style"))
-    pair_bar_scale = fig_scale if fig_scale is not None else (pair_bar_style.figure_scale if pair_bar_style else base_scale)
+    pair_bar_scale = fig_scale if fig_scale is not None else (
+        pair_bar_style.figure_scale if pair_bar_style else base_scale)
     fig_pair_bar, ax_pair_bar, _ = plot_metric_bar(
         data,
         metric=cfg["pair_bar"].get("metric", "pairing"),
@@ -393,7 +438,6 @@ def plot_qe_results(
         **{k: v for k, v in cfg["pair_bar"].items() if k not in {"metric"}},
         fig_scale=pair_bar_scale,
         fig_aspect=fig_aspect,
-        style=pair_bar_style,
     )
     fig_pair_bar.savefig(
         os.path.join(plot_dir, _with_ext("pair_bar", file_format)),
@@ -403,7 +447,8 @@ def plot_qe_results(
 
     delta_scatter_cfg = cfg["delta_scatter"]
     delta_scatter_style = _resolve_style(style, delta_scatter_cfg.get("style"))
-    delta_scatter_scale = fig_scale if fig_scale is not None else (delta_scatter_style.figure_scale if delta_scatter_style else base_scale)
+    delta_scatter_scale = fig_scale if fig_scale is not None else (
+        delta_scatter_style.figure_scale if delta_scatter_style else base_scale)
     fig_delta_scatter, ax_delta_scatter, active_delta = plot_metric_scatter(
         data,
         metric=delta_scatter_cfg.get("metric", "deltaD"),
@@ -415,7 +460,6 @@ def plot_qe_results(
         **{k: v for k, v in delta_scatter_cfg.items() if k not in {"metric"}},
         fig_scale=delta_scatter_scale,
         fig_aspect=fig_aspect,
-        style=delta_scatter_style,
     )
     if with_legend:
         plot_legend(
@@ -437,7 +481,8 @@ def plot_qe_results(
     )
 
     delta_bar_style = _resolve_style(style, cfg["delta_bar"].get("style"))
-    delta_bar_scale = fig_scale if fig_scale is not None else (delta_bar_style.figure_scale if delta_bar_style else base_scale)
+    delta_bar_scale = fig_scale if fig_scale is not None else (
+        delta_bar_style.figure_scale if delta_bar_style else base_scale)
     fig_delta_bar, ax_delta_bar, _ = plot_metric_bar(
         data,
         metric=cfg["delta_bar"].get("metric", "deltaD"),
@@ -447,12 +492,26 @@ def plot_qe_results(
         **{k: v for k, v in cfg["delta_bar"].items() if k not in {"metric"}},
         fig_scale=delta_bar_scale,
         fig_aspect=fig_aspect,
-        style=delta_bar_style,
     )
     fig_delta_bar.savefig(
         os.path.join(plot_dir, _with_ext("deltaD_bar", file_format)),
         bbox_inches="tight",
         **_save_kwargs(file_format, dpi),
+    )
+
+    plot_task_legend(
+        plot_dir=plot_dir,
+        model_order=cfg["models"],
+        train_sizes=cfg["train_sizes"],
+        dataset_markers=QE_DATASET_MARKERS,
+        dataset_pretty=QE_DATASET_PRETTY,
+        head_order=qe_heads if qe_heads else None,
+        legends=["dataset", "heads", "models"],
+        file_format=file_format,
+        dpi=dpi,
+        fig_scale=fig_scale,
+        fig_aspect=fig_aspect,
+        **{k: v for k, v in cfg["legend"].items() if k not in {"legends"}},
     )
 
     return {
@@ -675,7 +734,6 @@ def plot_bsm_results(
             dataset_markers=BSM_DATASET_MARKERS,
             dataset_pretty=BSM_DATASET_PRETTY,
             **cfg["loss"],
-            style=loss_style,
             fig_scale=loss_scale,
             fig_aspect=fig_aspect,
         )
@@ -706,7 +764,8 @@ def plot_bsm_results(
     pair_bar_size = bar_train_size or cfg["typical_dataset_size"]
     pair_scatter_cfg = cfg["pair_scatter"]
     pair_scatter_style = _resolve_style(style, pair_scatter_cfg.get("style"))
-    pair_scatter_scale = fig_scale if fig_scale is not None else (pair_scatter_style.figure_scale if pair_scatter_style else base_scale)
+    pair_scatter_scale = fig_scale if fig_scale is not None else (
+        pair_scatter_style.figure_scale if pair_scatter_style else base_scale)
     fig_pair_scatter, ax_pair_scatter, active_pair = plot_metric_scatter(
         data[data["mass_a"] == "30"],
         metric=pair_scatter_cfg.get("metric", "pairing"),
@@ -718,7 +777,6 @@ def plot_bsm_results(
         **{k: v for k, v in pair_scatter_cfg.items() if k not in {"metric"}},
         fig_scale=pair_scatter_scale,
         fig_aspect=fig_aspect,
-        style=pair_scatter_style,
     )
     if with_legend:
         plot_legend(
@@ -740,17 +798,17 @@ def plot_bsm_results(
     )
 
     pair_bar_style = _resolve_style(style, cfg["pair_bar"].get("style"))
-    pair_bar_scale = fig_scale if fig_scale is not None else (pair_bar_style.figure_scale if pair_bar_style else base_scale)
+    pair_bar_scale = fig_scale if fig_scale is not None else (
+        pair_bar_style.figure_scale if pair_bar_style else base_scale)
     fig_pair_bar, ax_pair_bar, _ = plot_metric_bar(
         data[data["mass_a"] == "30"],
         metric=cfg["pair_bar"].get("metric", "pairing"),
         model_order=cfg["models"],
-        head_order=bsm_heads if bsm_heads else [None],
+        head_order=cfg['pair_heads'] if cfg['pair_heads'] else [None],
         train_size_for_bar=pair_bar_size,
         **{k: v for k, v in cfg["pair_bar"].items() if k not in {"metric"}},
         fig_scale=pair_bar_scale,
         fig_aspect=fig_aspect,
-        style=pair_bar_style,
     )
     fig_pair_bar.savefig(
         os.path.join(plot_dir, _with_ext("pair_bar", file_format)),
@@ -771,9 +829,15 @@ def plot_bsm_results(
         x_indicator=sic_cfg.get("x_indicator", cfg["typical_dataset_size"]),
         x_indicator_text_config=sic_cfg.get("x_indicator_text_config", None),
         y_min=sic_cfg.get("y_min", [0, 0, 0.85]),
+        y_max=sic_cfg.get("y_max", None),
         fig_scale=sic_scale,
         fig_aspect=fig_aspect,
-        style=sic_style,
+        fig_size_curve=sic_cfg.get("fig_size_curve", None),
+        fig_size_bar=sic_cfg.get("fig_size_bar", None),
+        fig_size_scatter=sic_cfg.get("fig_size_scatter", None),
+        bar_style=sic_cfg.get("bar_style", sic_style),
+        scatter_style=sic_cfg.get("scatter_style", sic_style),
+        curve_style=sic_cfg.get("curve_style", sic_style),
     )
     for name, (fig_sic, _) in sic_figs.items():
         fig_sic.savefig(
@@ -781,6 +845,22 @@ def plot_bsm_results(
             bbox_inches="tight",
             **_save_kwargs(file_format, dpi),
         )
+
+    plot_task_legend(
+        plot_dir=plot_dir,
+        model_order=cfg["models"],
+        train_sizes=cfg["train_sizes"],
+        dataset_markers=BSM_DATASET_MARKERS,
+        dataset_pretty=BSM_DATASET_PRETTY,
+        head_order=bsm_heads if bsm_heads else None,
+        legends=["dataset", "heads", "models"],
+        file_format=file_format,
+        dpi=dpi,
+        fig_scale=fig_scale,
+        fig_aspect=fig_aspect,
+        **{k: v for k, v in cfg["legend"].items() if k not in {"legends"}},
+    )
+
     return {
         "loss": loss_outputs,
         "pair": {
@@ -1052,6 +1132,8 @@ def plot_ad_results(
         style=sig_style,
         fig_scale=sig_scale,
         fig_aspect=fig_aspect,
+        in_figure=True,
+        fig_size=cfg["sig"].get("fig_size", None),
     )
 
     gen_style = _resolve_style(style, cfg["gen"].get("style"))
@@ -1070,6 +1152,8 @@ def plot_ad_results(
         style=gen_style,
         fig_scale=gen_scale,
         fig_aspect=fig_aspect,
+        in_figure=True,
+        figsize=cfg["gen"].get("fig_size", (12, 7)),
     )
 
     pass
@@ -1182,7 +1266,7 @@ def plot_final_paper_figures(
 
     if ad_data is not None:
         opts = figure_options.get("ad", {})
-        results["ad"] = plot_ad_results(
+        plot_ad_results(
             ad_data,
             output_root=opts.get("output_root", output_root),
             file_format=opts.get("file_format", file_format),

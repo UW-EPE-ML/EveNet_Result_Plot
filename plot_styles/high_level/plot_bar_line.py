@@ -176,6 +176,7 @@ def plot_metric_bar(
         head_order: Sequence[str],
         train_size_for_bar: int,
         y_label: str = "",
+        y_max: Optional[float] = None,
         y_min: Optional[float] = None,
         fig_size=(6, 6),
         fig_scale: float = 1.0,
@@ -202,9 +203,10 @@ def plot_metric_bar(
     style_axis_basic(
         ax,
         y_label=y_label,
-        x_label="" if head_order == [None] else "Head",
+        x_label="",
         style=style,
         y_min=y_min,
+        y_max=y_max,
     )
 
     return fig, ax, active_models

@@ -14,14 +14,14 @@ import pandas as pd
 from plot_styles.style import MODEL_COLORS, HEAD_LINESTYLES
 
 DEFAULT_LINE_KWARGS = {
-    "linewidth": 2,
-    "alpha": 0.9,
+    "linewidth": 3,
+    "alpha": 1.0,
 }
 
 DEFAULT_SCATTER_KWARGS = {
     "s": 140,
     "edgecolor": "black",
-    "linewidth": 0.7,
+    "linewidth": 1.0,
     "alpha": 0.85,
 }
 
