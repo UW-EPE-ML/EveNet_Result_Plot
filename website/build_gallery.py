@@ -670,10 +670,13 @@ def main():
             *[
                 {
                     "src": str(Path(path).relative_to(output_dir)),
-                    "caption": "AD: generative calibration and MMD",
+                    "caption": caption,
                     "table": ad_gen_table,
                 }
-                for path in ad_outputs["gen"]
+                for caption, path in zip(
+                    ["AD: generative MMD", "AD: calibration magnitude"],
+                    ad_outputs["gen"],
+                )
             ],
         ]
         sections.append(
