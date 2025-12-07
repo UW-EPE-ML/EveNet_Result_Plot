@@ -196,6 +196,7 @@ DEFAULT_AD_CONFIG = {
         "percentage": True,
         "train_types": ["OS", "SS"],
         "region_gap": 0.4,
+        "include_uncalibrated": False,
     },
 }
 
@@ -1162,6 +1163,7 @@ def plot_ad_results(
             label=gen_cfg.get("label", ""),
             train_types=gen_cfg.get("train_types"),
             region_gap=gen_cfg.get("region_gap", 0.4),
+            include_uncalibrated=gen_cfg.get("include_uncalibrated"),
             f_name=f_name,
             plot_dir=plot_dir,
             y_min=gen_cfg.get("y_min"),

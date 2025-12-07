@@ -196,6 +196,7 @@ def plot_ad_gen_summary(
         label="MMD",
         train_types: tuple[str, ...] | list[str] = ("OS", "SS"),
         region_gap: float = 0.4,
+        include_uncalibrated: bool | None = None,
         y_min=None,
         f_name=None,
         plot_dir="./",
@@ -231,7 +232,11 @@ def plot_ad_gen_summary(
 
     # determine which calibration states actually have data to avoid gaps
     available_cal_states = []
-    for cal_state in [False, True]:
+    cal_candidates = [False, True]
+    if include_uncalibrated is False:
+        cal_candidates = [True]
+
+    for cal_state in cal_candidates:
         has_data = any(
             df[
                 (df["model"] == m)
