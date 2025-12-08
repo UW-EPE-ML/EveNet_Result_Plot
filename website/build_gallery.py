@@ -416,6 +416,35 @@ def _loss_table(df, *, model_order: List[str]) -> Dict[str, object] | None:
     return _table_from_dicts(rows, header_order=headers)
 
 
+def _systematics_ci_table(
+    df,
+    *,
+    metric_col: str,
+    model_order: List[str],
+    label: str,
+) -> Dict[str, object] | None:
+    rows = []
+    for model in model_order:
+        subset = df[df["model_pretty"] == model]
+        if subset.empty:
+            continue
+        values = subset[metric_col].dropna().to_numpy()
+        if values.size == 0:
+            continue
+        ci68 = np.percentile(values, [16, 84])
+        ci95 = np.percentile(values, [2.5, 97.5])
+        rows.append(
+            {
+                "model": model,
+                "metric": label,
+                "68% CI": f"{ci68[0]:.3g} – {ci68[1]:.3g}",
+                "95% CI": f"{ci95[0]:.3g} – {ci95[1]:.3g}",
+            }
+        )
+
+    return _table_from_dicts(rows, header_order=["model", "metric", "68% CI", "95% CI"])
+
+
 def _ad_significance_table(df) -> Dict[str, object] | None:
     rows = []
     for _, row in df.iterrows():
@@ -610,13 +639,22 @@ def main():
             ),
         ]
         bsm_sic_tables = [None, bsm_sic_bar_table, bsm_sic_scatter_table]
-        bsm_systematics_plots = [
-            {
-                "src": str(Path(path).relative_to(output_dir)),
-                "caption": "BSM: JES systematics",
-            }
-            for path in bsm_outputs.get("systematics", [])
-        ]
+        bsm_systematics_plots = []
+        for path, (name, cfg) in zip(
+            bsm_outputs.get("systematics", []), DEFAULT_BSM_CONFIG["systematics"].items()
+        ):
+            bsm_systematics_plots.append(
+                {
+                    "src": str(Path(path).relative_to(output_dir)),
+                    "caption": f"BSM: JES systematics ({cfg.get('label', name)})",
+                    "table": _systematics_ci_table(
+                        bsm_systematics,
+                        metric_col=cfg["metric_col"],
+                        model_order=cfg.get("models", DEFAULT_BSM_CONFIG["models"]),
+                        label=cfg.get("label", name),
+                    ),
+                }
+            )
         bsm_plots = [
             {"src": str(Path(bsm_outputs["legend"]).relative_to(output_dir)), "caption": "BSM legend"},
             *[
