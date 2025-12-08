@@ -171,7 +171,7 @@ DEFAULT_BSM_CONFIG = {
             # "cmap": "coolwarm",
             "cmap": LinearSegmentedColormap.from_list(
                 "custom_jes",
-                ["#73C8F0", "#D4D0CD", "#F2A7A5"],  # low → mid → high
+                ["#2077B4", "#E6DDD9", "#FF7F0F"],  # low → mid → high
                 N=256
             ),
             "colorbar_label": r"$\alpha_\mathrm{JES}$ [%]",

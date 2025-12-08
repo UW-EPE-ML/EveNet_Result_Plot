@@ -8,7 +8,6 @@ from plot_styles.style import MODEL_COLORS, MODEL_PRETTY
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
-
 def beeswarm_offsets(values: np.ndarray, max_width: float = 0.35, bins: int = 60) -> np.ndarray:
     """
     Deterministic KDE-based symmetric beeswarm jitter.
@@ -98,38 +97,38 @@ def plot_systematic_scatter(
         box_color = MODEL_COLORS[model]
         # box_color = "#9F52C3"
         # box_color = "#AFA6C6"
-        p50 = np.percentile(x, 50)
-        p25, p75 = np.percentile(x, [25, 75])
-        ci95_low, ci95_high = np.percentile(x, [2.5, 97.5])
+        # ===== Compute statistics =====
+        p50 = np.percentile(x, 50)  # median
+        ci68_low, ci68_high = np.percentile(x, [16, 84])  # 68% central interval
+        ci95_low, ci95_high = np.percentile(x, [2.5, 97.5])  # 95% central interval
 
-        # 95% whisker
-        ax.plot([ci95_low, ci95_high], [box_center, box_center],
-                color=box_color, lw=2.0, alpha=1.0)
-
-        # whisker caps
-        ax.plot([ci95_low, ci95_low], [box_center - h_scale * 0.4, box_center + h_scale * 0.4],
-                color=box_color, lw=2.5, alpha=1.0)
-        ax.plot([ci95_high, ci95_high], [box_center - h_scale * 0.4, box_center + h_scale * 0.4],
-                color=box_color, lw=2.5, alpha=1.0)
-
-        # Transparent IQR box
+        # ===== 95% band (lightest) =====
         ax.add_patch(plt.Rectangle(
-            (p25, box_center - h_scale * 0.4),
-            p75 - p25,
-            h_scale * 0.8,
-            # fill=False,
-            edgecolor=box_color,
+            (ci95_low, box_center - h_scale * 0.50),  # x, y bottom
+            ci95_high - ci95_low,  # width
+            h_scale,  # height
             facecolor=box_color,
-            linewidth=2.0,
-            alpha=0.75,
+            edgecolor=box_color,
+            alpha=0.35,  # light band
         ))
 
-        # Median vertical line
+        # ===== 68% band (darker and inside the 95%) =====
+        ax.add_patch(plt.Rectangle(
+            (ci68_low, box_center - h_scale * 0.50),
+            ci68_high - ci68_low,
+            h_scale,
+            facecolor=box_color,
+            edgecolor=box_color,
+            alpha=0.65,  # darker band
+        ))
+
+        # ===== Median line (strongest visual emphasis) =====
         ax.plot(
             [p50, p50],
-            [box_center - h_scale * 0.38, box_center + h_scale * 0.38],
+            [box_center - h_scale * 0.50, box_center + h_scale * 0.50],
             color=box_color,
-            lw=2.5 * scale, alpha=1.0
+            lw=3.0 * scale,
+            alpha=1.0
         )
 
         # Scatter cloud (upper layer)
