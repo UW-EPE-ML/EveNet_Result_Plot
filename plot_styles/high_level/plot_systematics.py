@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import gaussian_kde
 
+from plot_styles.core.legend import add_ci_legend
 from plot_styles.core.theme import PlotStyle, scaled_fig_size, use_style
 from plot_styles.core.style_axis import apply_nature_axis_style
 from plot_styles.style import MODEL_COLORS, MODEL_PRETTY
@@ -69,6 +70,7 @@ def plot_systematic_scatter(
         cmap: str = "coolwarm",
         colorbar_label: str = "",
         style: PlotStyle | None = None,
+        with_legend: bool = True,
 ):
     """Plot a JES systematics beeswarm using a normalized metric."""
 
@@ -94,7 +96,7 @@ def plot_systematic_scatter(
         box_center = position - 0.2  # lower half band
 
         # Percentiles
-        box_color = MODEL_COLORS[model]
+        # box_color = MODEL_COLORS[model]
         # box_color = "#9F52C3"
         # box_color = "#AFA6C6"
         # ===== Compute statistics =====
@@ -103,31 +105,34 @@ def plot_systematic_scatter(
         ci95_low, ci95_high = np.percentile(x, [2.5, 97.5])  # 95% central interval
 
         # ===== 95% band (lightest) =====
+        col_outer = "#D9D9D9"
         ax.add_patch(plt.Rectangle(
             (ci95_low, box_center - h_scale * 0.50),  # x, y bottom
             ci95_high - ci95_low,  # width
             h_scale,  # height
-            facecolor=box_color,
-            edgecolor=box_color,
-            alpha=0.35,  # light band
+            facecolor=col_outer,
+            edgecolor=col_outer,
+            alpha=0.65,
         ))
 
         # ===== 68% band (darker and inside the 95%) =====
+        col_inner = "#A6A6A6"
         ax.add_patch(plt.Rectangle(
             (ci68_low, box_center - h_scale * 0.50),
             ci68_high - ci68_low,
             h_scale,
-            facecolor=box_color,
-            edgecolor=box_color,
-            alpha=0.65,  # darker band
+            facecolor=col_inner,
+            edgecolor=col_inner,
+            alpha=0.85,  # darker band
         ))
 
         # ===== Median line (strongest visual emphasis) =====
-        ax.plot(
-            [p50, p50],
-            [box_center - h_scale * 0.50, box_center + h_scale * 0.50],
-            color=box_color,
-            lw=3.0 * scale,
+        ax.vlines(
+            p50,
+            box_center - h_scale * 0.50,
+            box_center + h_scale * 0.50,
+            color="black",
+            linewidth=2.0 * scale,
             alpha=1.0
         )
 
@@ -149,10 +154,13 @@ def plot_systematic_scatter(
     ax.set_yticklabels([MODEL_PRETTY[name] for name in active_models])
     ax.set_xlabel(x_label)
 
+    xmin, xmax = ax.get_xlim()
+    # ax.set_xlim(xmin - 1.0, xmax)
+
     apply_nature_axis_style(ax, style=style)
     if scatter is not None:
         # ---- Force global color range ----
-        clim_min, clim_max = -3.0, 3.0
+        clim_min, clim_max = -2.0, 2.0
         scatter.set_clim(clim_min, clim_max)  # update the scatter normalization
 
         divider = make_axes_locatable(ax)
@@ -160,11 +168,11 @@ def plot_systematic_scatter(
         cbar = plt.colorbar(scatter, cax=cax)
 
         # ---- Styling ----
-        # cbar.set_label(
-        #     colorbar_label,
-        #     labelpad=2,
-        #     fontsize=style.axis_label_size if style else None
-        # )
+        cbar.set_label(
+            colorbar_label,
+            labelpad=-0.5,
+            fontsize=style.axis_label_size if style else None
+        )
         cbar.ax.tick_params(labelsize=style.tick_label_size if style else None)
 
         # ---- Only two ticks (min & max) ----
@@ -172,5 +180,15 @@ def plot_systematic_scatter(
         cbar.set_ticklabels([f"{clim_min:.0f}", f"{clim_max:.0f}"])
         cbar.ax.tick_params(size=0)  # hide tick marks
         cbar.ax.minorticks_off()
+
+    if with_legend:
+        add_ci_legend(
+            fig,
+            labels=["Median", "68% CI", "95% CI"],  # required 3 labels
+            colors=["black", "#A6A6A6", "#D9D9D9"],  # median line, inner, outer
+            style=style,  # << uses PlotStyle control
+            horizontal=False,  # horizontal row legend
+            frameon=False,
+        )
 
     return fig, ax, active_models

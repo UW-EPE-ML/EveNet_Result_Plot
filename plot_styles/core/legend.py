@@ -161,6 +161,83 @@ def plot_legend(
         add_legend(handles, labels, ncol=3)
 
 
+def add_ci_legend(
+        fig,
+        *,
+        labels: list[str],
+        colors: list[str],
+        horizontal: bool = True,
+        style: "PlotStyle | None" = None,
+        box_size: float = 14,
+        # loc: str = "upper center",
+        # bbox_to_anchor=(0.5, 1.02),
+        frameon: bool = False,
+):
+    """
+    Minimal legend for median + CI bands:
+       labels[0] = Median line
+       labels[1] = 68% band (box)
+       labels[2] = 95% band (box)
+
+    Uses PlotStyle to control font size & scaling
+    """
+
+    assert len(labels) == len(colors) == 3, "Expect exactly three items: line, 68%, 95%"
+
+    # ========= Style handling =========
+    marker_scale = style.object_scale if style and style.object_scale else 1.0
+    legend_fontsize = (
+        style.legend_size
+        if style and style.legend_size is not None
+        else plt.rcParams.get("legend.fontsize", 12)
+    )
+    line_width = 2.2 * marker_scale  # scales with style
+    box_size *= marker_scale  # responsive box scaling
+
+    # ========= Handles =========
+    h_line = Rectangle(
+        (0, 0), 1, 1,
+        facecolor=colors[0],
+        edgecolor="black",
+        label=labels[0]
+    )
+
+    h_68 = Rectangle(
+        (0, 0), 1, 1,
+        facecolor=colors[1],
+        edgecolor="black",
+        label=labels[1]
+    )
+
+    h_95 = Rectangle(
+        (0, 0), 1, 1,
+        facecolor=colors[2],
+        edgecolor="black",
+        label=labels[2]
+    )
+
+    handles = [h_line, h_68, h_95]
+    ncol = 3 if horizontal else 1
+
+    # ========= Legend drawing =========
+    legend = fig.legend(
+        handles,
+        labels,
+        ncol=ncol,
+        loc="upper center" if not style.legend_loc else style.legend_loc,
+        bbox_to_anchor=(0.5, 1.15) if not style.legend_anchor else style.legend_anchor,
+        fontsize=legend_fontsize,
+        frameon=frameon,
+        handlelength=1.6 * marker_scale,
+        handleheight=box_size / 14,
+        markerscale=box_size / 14,
+        handletextpad=0.45,
+        columnspacing=1.1,
+    )
+
+    return legend
+
+
 def plot_only_legend(fig_size=(6, 2), style: PlotStyle | None = None, **kwargs):
     """Convenience wrapper to render legends on an empty canvas."""
     fig = plt.figure(figsize=fig_size)

@@ -37,6 +37,8 @@ class PlotStyle:
     object_scale: float = 1.0
     nbins: int | None = None
     full_axis: bool = True
+    legend_anchor: tuple[float, float] | None = None
+    legend_loc: str | None = None
 
     def _resolved_sizes(self) -> dict:
         tick_size = self.tick_label_size or self.base_font_size * 0.9

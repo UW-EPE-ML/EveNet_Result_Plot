@@ -166,12 +166,15 @@ DEFAULT_BSM_CONFIG = {
     "systematics": {
         "sic": {
             "fig_size": (13, 2.25),
-            "style": PlotStyle(base_font_size=20.0, tick_label_size=19.0),
+            "style": PlotStyle(
+                base_font_size=20.0, tick_label_size=19.0, axis_label_size=19.0,
+                legend_size=17.0, legend_anchor=(0.13, 0.07), legend_loc="lower left",
+            ),
             "x_label": r"$\Delta_\mathrm{SIC} = (\mathrm{SIC}-\mu_\mathrm{SIC})/\sigma_\mathrm{SIC}$",
             # "cmap": "coolwarm",
             "cmap": LinearSegmentedColormap.from_list(
                 "custom_jes",
-                ["#2077B4", "#E6DDD9", "#FF7F0F"],  # low → mid → high
+                ["#3F5EFB", "#E5ECF6", "#FC466B", ],  # low → mid → high
                 N=256
             ),
             "colorbar_label": r"$\alpha_\mathrm{JES}$ [%]",
@@ -184,15 +187,18 @@ DEFAULT_BSM_CONFIG = {
         },
         "pairing": {
             "fig_size": (13, 2.25),
-            "style": PlotStyle(base_font_size=20.0, tick_label_size=19.0),
+            "style": PlotStyle(
+                base_font_size=20.0, tick_label_size=19.0, axis_label_size=19.0,
+                legend_size=17.0, legend_anchor=(0.88, 0.07), legend_loc="lower right",
+            ),
             "x_label": r"$\Delta_\epsilon^\mathrm{pair} = (\epsilon^\mathrm{pair}-\mu_\epsilon^\mathrm{pair})/\sigma_\epsilon^\mathrm{pair}$",
             # "cmap": "coolwarm",
             "cmap": LinearSegmentedColormap.from_list(
                 "custom_jes",
-                ["#67B4D7", "#BFBCBA", "#D08F8D"],    # low → mid → high
+                ["#3F5EFB", "#E5ECF6", "#FC466B", ],  # low → mid → high
                 N=256
             ),
-            "colorbar_label": "JES shift (%)",
+            "colorbar_label": r"$\alpha_\mathrm{JES}$ [%]",
             "models": ["Nominal", "Scratch"],
             "metric_col": "pairing_norm",
             "unc_col": "pairing_eff_unc_percent",
