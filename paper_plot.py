@@ -3,14 +3,17 @@ import json
 import os
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 from functools import reduce
 
 from plot_styles.high_level.plot_loss import plot_loss
 from plot_styles.high_level.plot_bar_line import plot_metric_scatter, plot_metric_bar
+from plot_styles.high_level.plot_systematics import plot_systematic_scatter
 from plot_styles.sic import sic_plot_individual
 from plot_styles.ad_bar import plot_ad_sig_summary, plot_ad_gen_summary
 from plot_styles.core.legend import plot_legend, plot_only_legend
 from plot_styles.core.theme import PlotStyle, scaled_fig_size, use_style
+from plot_styles.core.style_axis import apply_nature_axis_style
 from plot_styles.style import MODEL_COLORS, HEAD_LINESTYLES
 
 BITMAP_FORMATS = {"png", "jpg", "jpeg", "tiff", "bmp"}
@@ -159,6 +162,34 @@ DEFAULT_BSM_CONFIG = {
         "scatter_style": DEFAULT_STYLE,
         "curve_style": DEFAULT_STYLE,
     },
+    "systematics": {
+        "sic": {
+            "fig_size": (8, 5.5),
+            "style": DEFAULT_STYLE,
+            "x_label": r"Normalized SIC shift $\Delta = (\mathrm{SIC}-\mu)/\sigma$",
+            "cmap": "coolwarm",
+            "colorbar_label": "JES shift (%)",
+            "models": ["Full", "SSL", "Scratch"],
+            "metric_col": "sic_norm",
+            "unc_col": "sic_unc",
+            "color_col": "jes_shift_percent",
+            "suffix": "sic",
+            "label": "SIC (normalized)",
+        },
+        "pairing": {
+            "fig_size": (8, 5.5),
+            "style": DEFAULT_STYLE,
+            "x_label": r"Normalized pairing shift $\Delta = (\mathrm{pair}-\mu)/\sigma$",
+            "cmap": "coolwarm",
+            "colorbar_label": "JES shift (%)",
+            "models": ["Full", "SSL", "Scratch"],
+            "metric_col": "pairing_norm",
+            "unc_col": "pairing_eff_unc_percent",
+            "color_col": "jes_shift_percent",
+            "suffix": "pair",
+            "label": "Pairing efficiency (normalized)",
+        },
+    },
 }
 
 DEFAULT_AD_CONFIG = {
@@ -270,8 +301,6 @@ def _merge_configs(default: dict, override: dict | None) -> dict:
             merged[key] = value
 
     return merged
-
-
 def plot_task_legend(
         *,
         plot_dir: str,
@@ -706,11 +735,41 @@ def read_bsm_data(folder_path):
 
     df = reduce(lambda left, right: pd.merge(left, right, on=keys, how="outer"), dfs)
 
-    return df
+    # -- Systematics Summary -- #
+    systematics_path = os.path.join(folder_path, "jse_summary.json")
+    syst_df = pd.DataFrame()
+    if os.path.isfile(systematics_path):
+        with open(systematics_path) as f:
+            syst_data = json.load(f)
+
+        model_name_map = {
+            "scratch": "Scratch",
+            "pretrain-ablation1": "SSL",
+            "pretrain-ablation4": "Full",
+        }
+
+        syst_df = pd.DataFrame(syst_data)
+        syst_df["model_pretty"] = syst_df["model"].map(model_name_map).fillna(syst_df["model"])
+        syst_df["jes_shift_percent"] = syst_df["noise"] * 100
+        syst_df["pairing_eff_percent"] = syst_df["pairing_eff"] * 100
+        syst_df["pairing_eff_unc_percent"] = syst_df["pairing_eff_unc"] * 100
+
+        def _normalized(col):
+            grouped = syst_df.groupby("model_pretty")[col]
+            mean = grouped.transform("mean")
+            std = grouped.transform(lambda s: s.std(ddof=0))
+            std_safe = std.replace(0, np.nan).fillna(1.0)
+            return (syst_df[col] - mean) / std_safe
+
+        syst_df["sic_norm"] = _normalized("sic_max")
+        syst_df["pairing_norm"] = _normalized("pairing_eff_percent")
+
+    return df, syst_df
 
 
 def plot_bsm_results(
         data,
+        systematics_data=None,
         *,
         output_root: str = "plot",
         file_format: str = "pdf",
@@ -867,6 +926,30 @@ def plot_bsm_results(
             **_save_kwargs(file_format, dpi),
         )
 
+    systematic_output = {}
+    if systematics_data is not None and not systematics_data.empty:
+        for metric_name, syst_cfg in cfg["systematics"].items():
+            syst_style = _resolve_style(style, syst_cfg.get("style"))
+            syst_scale = fig_scale if fig_scale is not None else (syst_style.figure_scale if syst_style else base_scale)
+            fig_syst, ax_syst, active_syst = plot_systematic_scatter(
+                systematics_data,
+                model_order=syst_cfg.get("models", cfg["models"]),
+                metric_col=syst_cfg.get("metric_col", "sic_norm"),
+                unc_col=syst_cfg.get("unc_col", "sic_unc"),
+                color_col=syst_cfg.get("color_col", "jes_shift_percent"),
+                **{k: v for k, v in syst_cfg.items() if k not in {"style", "models", "metric_col", "unc_col", "color_col", "suffix"}},
+                style=syst_style,
+                fig_scale=syst_scale,
+                fig_aspect=fig_aspect,
+            )
+            suffix = syst_cfg.get("suffix", metric_name)
+            fig_syst.savefig(
+                os.path.join(plot_dir, _with_ext(f"systematics_{suffix}_scatter", file_format)),
+                bbox_inches="tight",
+                **_save_kwargs(file_format, dpi),
+            )
+            systematic_output[metric_name] = {"fig": fig_syst, "axes": [ax_syst], "active_models": active_syst}
+
     plot_task_legend(
         plot_dir=plot_dir,
         model_order=cfg["models"],
@@ -892,6 +975,7 @@ def plot_bsm_results(
             name: {"fig": fig_ax[0], "axes": [fig_ax[1]], "active_models": active_sic}
             for name, fig_ax in sic_figs.items()
         },
+        "systematics": systematic_output,
     }
 
 
@@ -962,6 +1046,7 @@ def plot_qe_results_webpage(
 
 def plot_bsm_results_webpage(
         data,
+        systematics_data=None,
         *,
         output_root: str = "plot",
         file_format: str = "pdf",
@@ -977,6 +1062,7 @@ def plot_bsm_results_webpage(
         # Set to an empty list if heads are not applicable for BSM.
         "heads": ["Cls", "Cls+Asn"],
         "train_sizes": [10, 30, 100, 300],
+        "systematics": DEFAULT_BSM_CONFIG.get("systematics", {}),
     }
 
     bsm_heads = BSM_CONFIG["heads"]
@@ -1001,6 +1087,7 @@ def plot_bsm_results_webpage(
 
     results = plot_bsm_results(
         data,
+        systematics_data=systematics_data,
         output_root=output_root,
         file_format=file_format,
         dpi=dpi,
@@ -1023,6 +1110,12 @@ def plot_bsm_results_webpage(
             os.path.join(plot_dir, _with_ext("sic_bar", file_format)),
             os.path.join(plot_dir, _with_ext("sic_scatter", file_format)),
         ],
+        "systematics": [
+            os.path.join(plot_dir, _with_ext(
+                f"systematics_{BSM_CONFIG['systematics'][name].get('suffix', name)}_scatter", file_format
+            ))
+            for name in BSM_CONFIG["systematics"].keys()
+        ] if results.get("systematics") else [],
     }
 
 
@@ -1295,9 +1388,14 @@ def plot_final_paper_figures(
         )
 
     if bsm_data is not None:
+        if isinstance(bsm_data, tuple):
+            bsm_summary, bsm_systematics = bsm_data
+        else:
+            bsm_summary, bsm_systematics = bsm_data, None
         opts = figure_options.get("bsm", {})
         results["bsm"] = plot_bsm_results(
-            bsm_data,
+            bsm_summary,
+            systematics_data=bsm_systematics,
             output_root=opts.get("output_root", output_root),
             file_format=opts.get("file_format", file_format),
             dpi=opts.get("dpi", dpi),
@@ -1330,8 +1428,8 @@ if __name__ == '__main__':
     # qe_data = read_qe_data('data/QE_results_table.csv')
     # plot_qe_results(qe_data)
 
-    bsm_data = read_bsm_data('data/BSM')
-    plot_bsm_results(bsm_data)
+    bsm_summary, bsm_systematics = read_bsm_data('data/BSM')
+    plot_bsm_results(bsm_summary, systematics_data=bsm_systematics)
 
     # ad_data = read_ad_data("data/AD")
     # plot_ad_results(ad_data)
