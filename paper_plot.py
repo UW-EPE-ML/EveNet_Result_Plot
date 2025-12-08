@@ -3,7 +3,9 @@ import json
 import os
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 from functools import reduce
+from scipy.stats import gaussian_kde
 
 from plot_styles.high_level.plot_loss import plot_loss
 from plot_styles.high_level.plot_bar_line import plot_metric_scatter, plot_metric_bar
@@ -11,6 +13,7 @@ from plot_styles.sic import sic_plot_individual
 from plot_styles.ad_bar import plot_ad_sig_summary, plot_ad_gen_summary
 from plot_styles.core.legend import plot_legend, plot_only_legend
 from plot_styles.core.theme import PlotStyle, scaled_fig_size, use_style
+from plot_styles.core.style_axis import apply_nature_axis_style
 from plot_styles.style import MODEL_COLORS, HEAD_LINESTYLES
 
 BITMAP_FORMATS = {"png", "jpg", "jpeg", "tiff", "bmp"}
@@ -159,6 +162,14 @@ DEFAULT_BSM_CONFIG = {
         "scatter_style": DEFAULT_STYLE,
         "curve_style": DEFAULT_STYLE,
     },
+    "systematics": {
+        "fig_size": (8, 5.5),
+        "style": DEFAULT_STYLE,
+        "x_label": r"Normalized SIC shift $\\Delta = (\\mathrm{SIC}-\\mu)/\\sigma$",
+        "cmap": "coolwarm",
+        "colorbar_label": "JES shift (%)",
+        "models": ["Full", "SSL", "Scratch"],
+    },
 }
 
 DEFAULT_AD_CONFIG = {
@@ -262,6 +273,96 @@ def _merge_configs(default: dict, override: dict | None) -> dict:
             merged[key] = value
 
     return merged
+
+
+def _beeswarm_offsets(values: np.ndarray, max_width: float = 0.35, seed: int = 0) -> np.ndarray:
+    """Return deterministic jitter offsets for a beeswarm effect."""
+
+    if len(values) == 0:
+        return np.array([])
+    if len(values) == 1:
+        return np.array([0.0])
+
+    rng = np.random.default_rng(seed)
+    try:
+        density = gaussian_kde(values)(values)
+    except Exception:
+        density = np.ones_like(values, dtype=float)
+    density = density / density.max()
+    return rng.uniform(-1, 1, size=len(values)) * density * max_width
+
+
+def systematic_scatter(
+        data_df,
+        *,
+        model_order,
+        fig_size=(8, 5.5),
+        fig_scale: float = 1.0,
+        fig_aspect: float | None = None,
+        x_label: str = "",
+        cmap: str = "coolwarm",
+        colorbar_label: str = "",
+        style: PlotStyle | None = None,
+):
+    """Plot JES systematics using a beeswarm-style scatter layout."""
+
+    with use_style(style):
+        resolved_size = scaled_fig_size(fig_size, scale=fig_scale, aspect_ratio=fig_aspect)
+        fig, ax = plt.subplots(figsize=resolved_size)
+
+    active_models = []
+    scale = style.object_scale if style else 1.0
+    scatter = None
+
+    for model in model_order:
+        subset = data_df[data_df["model_pretty"] == model]
+        if subset.empty:
+            continue
+
+        position = len(active_models)
+        active_models.append(model)
+        x = subset["sic_norm"].to_numpy()
+        y = _beeswarm_offsets(x, max_width=0.35 * scale) + position
+
+        ci68 = np.percentile(x, [16, 84])
+        ci95 = np.percentile(x, [2.5, 97.5])
+
+        ax.fill_betweenx(
+            [position - 0.25, position + 0.25],
+            ci68[0],
+            ci68[1],
+            color="gray",
+            alpha=0.06,
+            linewidth=0,
+            zorder=0,
+        )
+
+        ax.plot([ci95[0], ci95[1]], [position, position], color="0.75", lw=0.9 * scale, alpha=0.9, zorder=1)
+        ax.scatter([ci95[0], ci95[1]], [position, position], color="0.55", s=10 * scale, alpha=0.9, zorder=2)
+
+        scatter = ax.scatter(
+            x,
+            y,
+            c=subset["jes_shift_percent"],
+            cmap=cmap,
+            s=18 * scale + subset["sic_unc"].to_numpy() * 60 * scale,
+            alpha=0.9,
+            linewidths=0,
+            zorder=2,
+        )
+
+    ax.axvline(0, color="0.8", lw=0.8 * scale, ls="--", zorder=0)
+    ax.set_yticks(range(len(active_models)))
+    ax.set_yticklabels(active_models)
+    ax.set_xlabel(x_label)
+
+    apply_nature_axis_style(ax, style=style)
+    if scatter is not None:
+        cbar = plt.colorbar(scatter, ax=ax, pad=0.02)
+        cbar.set_label(colorbar_label, fontsize=style.axis_label_size if style else None)
+        cbar.ax.tick_params(labelsize=style.tick_label_size if style else None)
+
+    return fig, ax, active_models
 
 
 def plot_task_legend(
@@ -698,11 +799,32 @@ def read_bsm_data(folder_path):
 
     df = reduce(lambda left, right: pd.merge(left, right, on=keys, how="outer"), dfs)
 
-    return df
+    # -- Systematics Summary -- #
+    systematics_path = os.path.join(folder_path, "jse_summary.json")
+    syst_df = pd.DataFrame()
+    if os.path.isfile(systematics_path):
+        with open(systematics_path) as f:
+            syst_data = json.load(f)
+
+        model_name_map = {
+            "scratch": "Scratch",
+            "pretrain-ablation1": "SSL",
+            "pretrain-ablation4": "Full",
+        }
+
+        syst_df = pd.DataFrame(syst_data)
+        syst_df["model_pretty"] = syst_df["model"].map(model_name_map).fillna(syst_df["model"])
+        syst_df["jes_shift_percent"] = syst_df["noise"] * 100
+        syst_df["sic_norm"] = syst_df.groupby("model_pretty")['sic_max'].transform(
+            lambda s: (s - s.mean()) / s.std(ddof=0)
+        )
+
+    return df, syst_df
 
 
 def plot_bsm_results(
         data,
+        systematics_data=None,
         *,
         output_root: str = "plot",
         file_format: str = "pdf",
@@ -859,6 +981,26 @@ def plot_bsm_results(
             **_save_kwargs(file_format, dpi),
         )
 
+    systematic_output = None
+    if systematics_data is not None and not systematics_data.empty:
+        syst_cfg = cfg["systematics"]
+        syst_style = _resolve_style(style, syst_cfg.get("style"))
+        syst_scale = fig_scale if fig_scale is not None else (syst_style.figure_scale if syst_style else base_scale)
+        fig_syst, ax_syst, active_syst = systematic_scatter(
+            systematics_data,
+            model_order=syst_cfg.get("models", cfg["models"]),
+            **{k: v for k, v in syst_cfg.items() if k not in {"style", "models"}},
+            style=syst_style,
+            fig_scale=syst_scale,
+            fig_aspect=fig_aspect,
+        )
+        fig_syst.savefig(
+            os.path.join(plot_dir, _with_ext("systematics_scatter", file_format)),
+            bbox_inches="tight",
+            **_save_kwargs(file_format, dpi),
+        )
+        systematic_output = {"fig": fig_syst, "axes": [ax_syst], "active_models": active_syst}
+
     plot_task_legend(
         plot_dir=plot_dir,
         model_order=cfg["models"],
@@ -884,6 +1026,7 @@ def plot_bsm_results(
             name: {"fig": fig_ax[0], "axes": [fig_ax[1]], "active_models": active_sic}
             for name, fig_ax in sic_figs.items()
         },
+        "systematics": systematic_output,
     }
 
 
@@ -954,6 +1097,7 @@ def plot_qe_results_webpage(
 
 def plot_bsm_results_webpage(
         data,
+        systematics_data=None,
         *,
         output_root: str = "plot",
         file_format: str = "pdf",
@@ -993,6 +1137,7 @@ def plot_bsm_results_webpage(
 
     results = plot_bsm_results(
         data,
+        systematics_data=systematics_data,
         output_root=output_root,
         file_format=file_format,
         dpi=dpi,
@@ -1015,6 +1160,9 @@ def plot_bsm_results_webpage(
             os.path.join(plot_dir, _with_ext("sic_bar", file_format)),
             os.path.join(plot_dir, _with_ext("sic_scatter", file_format)),
         ],
+        "systematics": [
+            os.path.join(plot_dir, _with_ext("systematics_scatter", file_format)),
+        ] if results.get("systematics") else [],
     }
 
 
@@ -1272,9 +1420,14 @@ def plot_final_paper_figures(
         )
 
     if bsm_data is not None:
+        if isinstance(bsm_data, tuple):
+            bsm_summary, bsm_systematics = bsm_data
+        else:
+            bsm_summary, bsm_systematics = bsm_data, None
         opts = figure_options.get("bsm", {})
         results["bsm"] = plot_bsm_results(
-            bsm_data,
+            bsm_summary,
+            systematics_data=bsm_systematics,
             output_root=opts.get("output_root", output_root),
             file_format=opts.get("file_format", file_format),
             dpi=opts.get("dpi", dpi),
@@ -1307,8 +1460,8 @@ if __name__ == '__main__':
     # qe_data = read_qe_data('data/QE_results_table.csv')
     # plot_qe_results(qe_data)
 
-    bsm_data = read_bsm_data('data/BSM')
-    plot_bsm_results(bsm_data)
+    bsm_summary, bsm_systematics = read_bsm_data('data/BSM')
+    plot_bsm_results(bsm_summary, systematics_data=bsm_systematics)
 
     # ad_data = read_ad_data("data/AD")
     # plot_ad_results(ad_data)

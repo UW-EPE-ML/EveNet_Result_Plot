@@ -568,9 +568,10 @@ def main():
 
     if not args.skip_bsm and Path("data/BSM").exists():
         print("Rendering BSM plots…")
-        bsm_data = read_bsm_data("data/BSM")
+        bsm_data, bsm_systematics = read_bsm_data("data/BSM")
         bsm_outputs = plot_bsm_results_webpage(
             bsm_data,
+            systematics_data=bsm_systematics,
             output_root=str(plots_root),
             file_format=args.format,
             dpi=args.dpi,
@@ -609,6 +610,13 @@ def main():
             ),
         ]
         bsm_sic_tables = [None, bsm_sic_bar_table, bsm_sic_scatter_table]
+        bsm_systematics_plots = [
+            {
+                "src": str(Path(path).relative_to(output_dir)),
+                "caption": "BSM: JES systematics",
+            }
+            for path in bsm_outputs.get("systematics", [])
+        ]
         bsm_plots = [
             {"src": str(Path(bsm_outputs["legend"]).relative_to(output_dir)), "caption": "BSM legend"},
             *[
@@ -635,6 +643,7 @@ def main():
                 }
                 for i, path in enumerate(bsm_outputs["sic"])
             ],
+            *bsm_systematics_plots,
         ]
         sections.append(
             _section(
