@@ -27,7 +27,7 @@ DEFAULT_QE_CONFIG = {
     # "train_sizes": [15, 148, 1475, 2950],
     "train_sizes": [15, 148, 1475],
     "models": ["Nominal", "SSL", "Scratch"],
-    "heads": [],
+    # "heads": [],
     "legend": {
         "legends": ["dataset", "heads", "models"],
         "fig_size": (5, 0.75),
@@ -414,7 +414,7 @@ def plot_qe_results(
 
     os.makedirs(plot_dir, exist_ok=True)
 
-    qe_heads = cfg["heads"]
+    qe_heads = cfg.get("heads", None)
     head_iter = qe_heads if qe_heads else [None]
 
     loss_outputs = {}
