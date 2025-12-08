@@ -39,7 +39,6 @@ def plot_ad_sig_summary(
         dpi: int | None = None,
         file_format: str | None = None,
         style: PlotStyle | None = None,
-        in_figure: bool = True,
 ):
     # Which models appear?
     detected = sorted(df["model"].unique())
@@ -129,7 +128,7 @@ def plot_ad_sig_summary(
         ymin, ymax = ax.get_ylim()
         ax.set_ylim(bottom=y_min, top=max(y_max := ymax, y_min))
 
-    sns.despine(ax=ax)
+    # sns.despine(ax=ax)
 
     if y_ref is not None:
         x_ref = (base_xpos[1] + bar_width) / (n_channels - 1 + bar_width)
@@ -149,7 +148,7 @@ def plot_ad_sig_summary(
         ax.text(
             x_ref * 1.05,
             y_ref * 0.98,
-            f"Reference Significance: {y_ref:.1f}$\\sigma$",
+            f"Ref. Significance: {y_ref:.1f}$\\sigma$",
             fontsize=19,
             color="gray",
             transform=trans,
@@ -335,7 +334,7 @@ def plot_ad_gen_summary(
     if y_min is not None:
         ymin, ymax = ax.get_ylim()
         ax.set_ylim(bottom=y_min, top=max(ymax, y_min))
-    sns.despine(ax=ax)
+    # sns.despine(ax=ax)
 
     def _with_ext(name: str) -> str:
         root, ext = os.path.splitext(name)

@@ -164,6 +164,11 @@ DEFAULT_BSM_CONFIG = {
 DEFAULT_AD_CONFIG = {
     "models": ["Nominal", "SSL", "Scratch"],
     "heads": [],
+    "legend": {
+        "legends": ["calibration", "models"],
+        "fig_size": (5, 0.5),
+        "style": DEFAULT_LEGEND_STYLE,
+    },
     "sig": {
         "channels_order": [
             "train-OS-test-OS",
@@ -175,8 +180,9 @@ DEFAULT_AD_CONFIG = {
         "var": "median",
         "y_ref": 6.4,
         "f_name": "ad_significance",
-        "style": PlotStyle(base_font_size=20.0, tick_label_size=19.0, legend_size=19.0),
-        "fig_size": (13,6)
+        "style": PlotStyle(base_font_size=20.0, tick_label_size=19.0, legend_size=19.0, full_axis=True),
+        "fig_size": (13,6),
+        "with_legend": False,
     },
     "gen_mmd": {
         "metric": "mmd",
@@ -189,14 +195,16 @@ DEFAULT_AD_CONFIG = {
     },
     "gen_calibration": {
         "metric": "mean_calibration_difference",
-        "label": "calibration magnitude [%]",
+        "label": "Cal. Mag. [%]",
         "f_name": "ad_generation_calibration",
         "fig_size": (6, 4),
         "y_min": 0,
         "percentage": True,
-        "train_types": ["OS", "SS"],
+        "train_types": ["OS"],
         "region_gap": 0.4,
         "include_uncalibrated": False,
+        "with_legend": False,
+        "style": PlotStyle(base_font_size=20.0, tick_label_size=19.0, full_axis=True),
     },
 }
 
@@ -1131,6 +1139,22 @@ def plot_ad_results(
 
     sig_style = _resolve_style(style, cfg["sig"].get("style"))
     sig_scale = fig_scale if fig_scale is not None else (sig_style.figure_scale if sig_style else base_scale)
+
+    plot_task_legend(
+        plot_dir=plot_dir,
+        model_order=cfg["models"],
+        train_sizes=None,
+        dataset_markers=None,
+        dataset_pretty=None,
+        head_order=None,
+        legends=["models", "calibration"],
+        file_format=file_format,
+        dpi=dpi,
+        style=style,
+        fig_scale=fig_scale,
+        fig_aspect=fig_aspect,
+    )
+
     plot_ad_sig_summary(
         data['sig'],
         models_order=cfg["models"],
@@ -1145,7 +1169,6 @@ def plot_ad_results(
         style=sig_style,
         fig_scale=sig_scale,
         fig_aspect=fig_aspect,
-        in_figure=True,
         fig_size=cfg["sig"].get("fig_size", None),
     )
 
