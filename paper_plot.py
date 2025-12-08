@@ -4,6 +4,7 @@ import os
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.colors import LinearSegmentedColormap
 from functools import reduce
 
 from plot_styles.high_level.plot_loss import plot_loss
@@ -104,7 +105,7 @@ DEFAULT_QE_CONFIG = {
 DEFAULT_BSM_CONFIG = {
     "train_sizes": [10, 30, 100, 300],
     "typical_dataset_size": 300,
-    "models": ["Nominal", "SSL", "Scratch",  "SPANet"],
+    "models": ["Nominal", "SSL", "Scratch", "SPANet"],
     "heads": ["Cls", "Cls+Asn"],
     "pair_heads": ["Cls+Asn"],
     "legend": {
@@ -164,12 +165,17 @@ DEFAULT_BSM_CONFIG = {
     },
     "systematics": {
         "sic": {
-            "fig_size": (8, 5.5),
-            "style": DEFAULT_STYLE,
-            "x_label": r"Normalized SIC shift $\Delta = (\mathrm{SIC}-\mu)/\sigma$",
-            "cmap": "coolwarm",
-            "colorbar_label": "JES shift (%)",
-            "models": ["Full", "SSL", "Scratch"],
+            "fig_size": (13, 2.25),
+            "style": PlotStyle(base_font_size=20.0, tick_label_size=19.0),
+            "x_label": r"$\Delta_\mathrm{SIC} = (\mathrm{SIC}-\mu_\mathrm{SIC})/\sigma_\mathrm{SIC}$",
+            # "cmap": "coolwarm",
+            "cmap": LinearSegmentedColormap.from_list(
+                "custom_jes",
+                ["#73C8F0", "#D4D0CD", "#F2A7A5"],  # low → mid → high
+                N=256
+            ),
+            "colorbar_label": r"$\alpha_\mathrm{JES}$ [%]",
+            "models": ["Nominal", "Scratch"],
             "metric_col": "sic_norm",
             "unc_col": "sic_unc",
             "color_col": "jes_shift_percent",
@@ -177,12 +183,17 @@ DEFAULT_BSM_CONFIG = {
             "label": "SIC (normalized)",
         },
         "pairing": {
-            "fig_size": (8, 5.5),
-            "style": DEFAULT_STYLE,
-            "x_label": r"Normalized pairing shift $\Delta = (\mathrm{pair}-\mu)/\sigma$",
-            "cmap": "coolwarm",
+            "fig_size": (13, 2.25),
+            "style": PlotStyle(base_font_size=20.0, tick_label_size=19.0),
+            "x_label": r"$\Delta_\epsilon^\mathrm{pair} = (\epsilon^\mathrm{pair}-\mu_\epsilon^\mathrm{pair})/\sigma_\epsilon^\mathrm{pair}$",
+            # "cmap": "coolwarm",
+            "cmap": LinearSegmentedColormap.from_list(
+                "custom_jes",
+                ["#67B4D7", "#BFBCBA", "#D08F8D"],    # low → mid → high
+                N=256
+            ),
             "colorbar_label": "JES shift (%)",
-            "models": ["Full", "SSL", "Scratch"],
+            "models": ["Nominal", "Scratch"],
             "metric_col": "pairing_norm",
             "unc_col": "pairing_eff_unc_percent",
             "color_col": "jes_shift_percent",
@@ -212,7 +223,7 @@ DEFAULT_AD_CONFIG = {
         "y_ref": 6.4,
         "f_name": "ad_significance",
         "style": PlotStyle(base_font_size=20.0, tick_label_size=19.0, legend_size=19.0, full_axis=True),
-        "fig_size": (13,6),
+        "fig_size": (13, 6),
         "with_legend": False,
     },
     "gen_mmd": {
@@ -301,6 +312,8 @@ def _merge_configs(default: dict, override: dict | None) -> dict:
             merged[key] = value
 
     return merged
+
+
 def plot_task_legend(
         *,
         plot_dir: str,
@@ -745,7 +758,7 @@ def read_bsm_data(folder_path):
         model_name_map = {
             "scratch": "Scratch",
             "pretrain-ablation1": "SSL",
-            "pretrain-ablation4": "Full",
+            "pretrain-ablation4": "Nominal",
         }
 
         syst_df = pd.DataFrame(syst_data)
@@ -754,15 +767,21 @@ def read_bsm_data(folder_path):
         syst_df["pairing_eff_percent"] = syst_df["pairing_eff"] * 100
         syst_df["pairing_eff_unc_percent"] = syst_df["pairing_eff_unc"] * 100
 
-        def _normalized(col):
-            grouped = syst_df.groupby("model_pretty")[col]
-            mean = grouped.transform("mean")
-            std = grouped.transform(lambda s: s.std(ddof=0))
-            std_safe = std.replace(0, np.nan).fillna(1.0)
-            return (syst_df[col] - mean) / std_safe
+        # def _normalized(col):
+        #     grouped = syst_df.groupby("model_pretty")[col]
+        #     mean = grouped.transform("mean")
+        #     std = grouped.transform(lambda s: s.std(ddof=0))
+        #     std_safe = std.replace(0, np.nan).fillna(1.0)
+        #     return (syst_df[col] - mean) / std_safe
+        #
+        # syst_df["sic_norm"] = _normalized("sic_max")
+        # syst_df["pairing_norm"] = _normalized("pairing_eff_percent")
 
-        syst_df["sic_norm"] = _normalized("sic_max")
-        syst_df["pairing_norm"] = _normalized("pairing_eff_percent")
+        syst_df["sic_norm"] = (syst_df["sic_max"] - syst_df.groupby("model_pretty")["sic_max"].transform("mean")) \
+                              / syst_df["sic_unc"]
+        syst_df["pairing_norm"] = (syst_df["pairing_eff_percent"] - syst_df.groupby("model_pretty")[
+            "pairing_eff_percent"].transform("mean")) \
+                                  / syst_df["pairing_eff_unc_percent"]
 
     return df, syst_df
 
@@ -937,7 +956,8 @@ def plot_bsm_results(
                 metric_col=syst_cfg.get("metric_col", "sic_norm"),
                 unc_col=syst_cfg.get("unc_col", "sic_unc"),
                 color_col=syst_cfg.get("color_col", "jes_shift_percent"),
-                **{k: v for k, v in syst_cfg.items() if k not in {"style", "models", "metric_col", "unc_col", "color_col", "suffix"}},
+                **{k: v for k, v in syst_cfg.items() if
+                   k not in {"style", "models", "metric_col", "unc_col", "color_col", "suffix"}},
                 style=syst_style,
                 fig_scale=syst_scale,
                 fig_aspect=fig_aspect,
