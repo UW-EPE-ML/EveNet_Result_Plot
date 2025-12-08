@@ -1,9 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from plot_styles.core.theme import scaled_fig_size, use_style
+from plot_styles.core.theme import PlotStyle, scaled_fig_size, use_style
 from plot_styles.core.style_axis import apply_nature_axis_style
-from plot_styles.core.style import PlotStyle
 
 
 def _beeswarm_offsets(values: np.ndarray, max_width: float = 0.35, seed: int = 0) -> np.ndarray:
@@ -34,6 +33,7 @@ def plot_systematic_scatter(
     fig_scale: float = 1.0,
     fig_aspect: float | None = None,
     x_label: str = "",
+    label: str | None = None,
     cmap: str = "coolwarm",
     colorbar_label: str = "",
     style: PlotStyle | None = None,

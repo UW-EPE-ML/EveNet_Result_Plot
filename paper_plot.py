@@ -166,7 +166,7 @@ DEFAULT_BSM_CONFIG = {
         "sic": {
             "fig_size": (8, 5.5),
             "style": DEFAULT_STYLE,
-            "x_label": r"Normalized SIC shift $\\Delta = (\\mathrm{SIC}-\\mu)/\\sigma$",
+            "x_label": r"Normalized SIC shift $\Delta = (\mathrm{SIC}-\mu)/\sigma$",
             "cmap": "coolwarm",
             "colorbar_label": "JES shift (%)",
             "models": ["Full", "SSL", "Scratch"],
@@ -179,7 +179,7 @@ DEFAULT_BSM_CONFIG = {
         "pairing": {
             "fig_size": (8, 5.5),
             "style": DEFAULT_STYLE,
-            "x_label": r"Normalized pairing shift $\\Delta = (\\mathrm{pair}-\\mu)/\\sigma$",
+            "x_label": r"Normalized pairing shift $\Delta = (\mathrm{pair}-\mu)/\sigma$",
             "cmap": "coolwarm",
             "colorbar_label": "JES shift (%)",
             "models": ["Full", "SSL", "Scratch"],
