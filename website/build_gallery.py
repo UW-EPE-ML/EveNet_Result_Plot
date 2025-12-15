@@ -31,6 +31,7 @@ from paper_plot import (  # noqa: E402  # pylint: disable=wrong-import-position
     DEFAULT_AD_CONFIG,
     DEFAULT_BSM_CONFIG,
     DEFAULT_QE_CONFIG,
+    _prepare_systematic_cases,
     read_ad_data,
     read_bsm_data,
     read_qe_data,
@@ -516,9 +517,10 @@ def main():
 
     if not args.skip_qe and Path("data/QE_results_table.csv").is_file():
         print("Rendering QC/QE plots…")
-        qe_data = read_qe_data("data/QE_results_table.csv")
+        qe_data, qe_systematics = read_qe_data("data/QE_results_table.csv")
         qe_outputs = plot_qe_results_webpage(
             qe_data,
+            systematics_data=qe_systematics,
             output_root=str(plots_root),
             file_format=args.format,
             dpi=args.dpi,
@@ -557,6 +559,28 @@ def main():
                 train_size_for_bar=pair_bar_size,
             ),
         ]
+        qe_cases = _prepare_systematic_cases(DEFAULT_QE_CONFIG.get("systematics", {}), qe_systematics)
+        qe_case_iter = iter(qe_cases)
+        qe_systematics_plots = []
+        for path in qe_outputs.get("systematics", []):
+            case = next(qe_case_iter, None)
+            if case is None:
+                break
+            label = case.get("label") or case.get("metric_name")
+            if case.get("noise_label"):
+                label = f"{label} ({case['noise_label']})"
+            qe_systematics_plots.append(
+                {
+                    "src": str(Path(path).relative_to(output_dir)),
+                    "caption": f"QC: systematics ({label})",
+                    "table": _systematics_ci_table(
+                        qe_systematics,
+                        metric_col=case["config"].get("metric_col"),
+                        model_order=case["config"].get("models", DEFAULT_QE_CONFIG["models"]),
+                        label=label,
+                    ),
+                }
+            )
         qe_plots = [
             {"src": str(Path(qe_outputs["legend"]).relative_to(output_dir)), "caption": "QC/QE legend"},
             *[
@@ -583,6 +607,7 @@ def main():
                 }
                 for i, path in enumerate(qe_outputs["delta"])
             ],
+            *qe_systematics_plots,
         ]
         sections.append(
             _section(
@@ -640,18 +665,25 @@ def main():
         ]
         bsm_sic_tables = [None, bsm_sic_bar_table, bsm_sic_scatter_table]
         bsm_systematics_plots = []
-        for path, (name, cfg) in zip(
-            bsm_outputs.get("systematics", []), DEFAULT_BSM_CONFIG["systematics"].items()
-        ):
+        bsm_cases = _prepare_systematic_cases(DEFAULT_BSM_CONFIG.get("systematics", {}), bsm_systematics)
+        bsm_case_iter = iter(bsm_cases)
+        for path in bsm_outputs.get("systematics", []):
+            case = next(bsm_case_iter, None)
+            if case is None:
+                break
+            cfg = case["config"]
+            label = cfg.get("label", case.get("metric_name"))
+            if case.get("noise_label"):
+                label = f"{label} ({case['noise_label']})"
             bsm_systematics_plots.append(
                 {
                     "src": str(Path(path).relative_to(output_dir)),
-                    "caption": f"BSM: JES systematics ({cfg.get('label', name)})",
+                    "caption": f"BSM: JES systematics ({label})",
                     "table": _systematics_ci_table(
                         bsm_systematics,
                         metric_col=cfg["metric_col"],
                         model_order=cfg.get("models", DEFAULT_BSM_CONFIG["models"]),
-                        label=cfg.get("label", name),
+                        label=label,
                     ),
                 }
             )
