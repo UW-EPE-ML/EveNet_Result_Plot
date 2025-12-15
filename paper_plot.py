@@ -134,16 +134,16 @@ DEFAULT_QE_CONFIG = {
                 base_font_size=20.0, tick_label_size=19.0, axis_label_size=19.0,
                 legend_size=17.0, legend_anchor=(0.88, 0.07), legend_loc="lower right",
             ),
-            "x_label": r"$\Delta_\mathrm{precision} = (\sigma_D-\mu_{\sigma_D})/\sigma_{\sigma_D}$",
+            "x_label": r"$\Delta_D = \sigma_D-\mu_{\sigma_D}$",
             "cmap": LinearSegmentedColormap.from_list(
                 "custom_precision",
                 ["#3F5EFB", "#E5ECF6", "#FC466B", ],
                 N=256
             ),
-            "colorbar_label": "Systematic shift",
+            "colorbar_label": r"$\alpha_\mathrm{JES}$ [%]",
             "models": ["Nominal", "Scratch"],
             "metric_col": "precision_norm",
-            "unc_col": "pairing_unc",
+            "unc_col": "precision_unc",
             "color_col": "syst_jes",
             "suffix": "precision",
             "label": "Precision (normalized)",
@@ -534,7 +534,7 @@ def read_qe_data(file_path):
                             "model_name": model_name,
                             "model_pretty": model_name,
                             "noise_name": noise_name,
-                            "syst_jes": syst.get("syst_jes", 0.0),
+                            "syst_jes": syst.get("syst_jes", 0.0) * 100,
                             "syst_met_px": syst.get("syst_met_px", 0.0),
                             "syst_met_py": syst.get("syst_met_py", 0.0),
                             "pairing": pairing,
@@ -545,12 +545,15 @@ def read_qe_data(file_path):
                         print(f"[WARN] Skipping {syst_dir}: {e}")
         return pd.DataFrame(rows)
 
-    syst_df = collect_results(Path('data/QE/systematics'),["full", "scratch"])
+    syst_df = collect_results(Path('data/QE/systematics'), ["full", "scratch"])
     # df = collect_results(Path('data/QE/systematics'), ["full"])
     syst_df.sort_values(["model_name", "noise_name"]).reset_index(drop=True)
 
-    syst_df['pairing_norm'] = (syst_df["pairing"] - syst_df.groupby("model_pretty")["pairing"].transform("mean")) / syst_df['pairing_unc']
-    syst_df['precision_norm'] = (syst_df["precision"] - syst_df.groupby("model_pretty")["precision"].transform("mean")) * 100
+    syst_df['pairing_norm'] = (syst_df["pairing"] - syst_df.groupby("model_pretty")["pairing"].transform("mean")) / \
+                              syst_df['pairing_unc']
+    syst_df['precision_norm'] = (syst_df["precision"] - syst_df.groupby("model_pretty")["precision"].transform(
+        "mean")) # / syst_df.groupby("model_pretty")["precision"].transform( "mean")
+    syst_df['precision_unc'] = 1
 
     return data, syst_df
 
