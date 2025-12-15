@@ -1,6 +1,9 @@
+import math
 import re
 import json
 import os
+from pathlib import Path
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -100,6 +103,50 @@ DEFAULT_QE_CONFIG = {
         "y_max": 1.7,
         "style": DEFAULT_BAR_STYLE,
     },
+    "systematics": {
+        "sic": {
+            "fig_size": (13, 2.25),
+            "style": PlotStyle(
+                base_font_size=20.0, tick_label_size=19.0, axis_label_size=19.0,
+                legend_size=17.0, legend_anchor=(0.13, 0.07), legend_loc="lower left",
+            ),
+            "x_label": r"$\Delta_\mathrm{SIC} = (\mathrm{SIC}-\mu_\mathrm{SIC})/\sigma_\mathrm{SIC}$",
+            # "cmap": "coolwarm",
+            "cmap": LinearSegmentedColormap.from_list(
+                "custom_jes",
+                ["#3F5EFB", "#E5ECF6", "#FC466B", ],  # low → mid → high
+                N=256
+            ),
+            "colorbar_label": r"$\alpha_\mathrm{JES}$ [%]",
+            "models": ["Nominal", "Scratch"],
+            "metric_col": "sic_norm",
+            "unc_col": "sic_unc",
+            "color_col": "jes_shift_percent",
+            "suffix": "sic",
+            "label": "SIC (normalized)",
+        },
+        "pairing": {
+            "fig_size": (13, 2.25),
+            "style": PlotStyle(
+                base_font_size=20.0, tick_label_size=19.0, axis_label_size=19.0,
+                legend_size=17.0, legend_anchor=(0.88, 0.07), legend_loc="lower right",
+            ),
+            "x_label": r"$\Delta_\epsilon^\mathrm{pair} = (\epsilon^\mathrm{pair}-\mu_\epsilon^\mathrm{pair})/\sigma_\epsilon^\mathrm{pair}$",
+            # "cmap": "coolwarm",
+            "cmap": LinearSegmentedColormap.from_list(
+                "custom_jes",
+                ["#3F5EFB", "#E5ECF6", "#FC466B", ],  # low → mid → high
+                N=256
+            ),
+            "colorbar_label": r"$\alpha_\mathrm{JES}$ [%]",
+            "models": ["Nominal", "Scratch"],
+            "metric_col": "pairing_norm",
+            "unc_col": "pairing_eff_unc_percent",
+            "color_col": "jes_shift_percent",
+            "suffix": "pair",
+            "label": "Pairing efficiency (normalized)",
+        },
+    },
 }
 
 DEFAULT_BSM_CONFIG = {
@@ -124,7 +171,7 @@ DEFAULT_BSM_CONFIG = {
         "x_label": "Train Size [K]",
         "y_min": 0.0,
         "logx": True,
-        "x_indicator": 250,
+        "x_indicator": 200,
         # "x_indicator_text_config": dict(
         #     fraction_x=0.95,
         #     fraction_y=20.75,
@@ -144,7 +191,7 @@ DEFAULT_BSM_CONFIG = {
         "style": DEFAULT_BAR_STYLE,
     },
     "sic": {
-        "x_indicator": 250,
+        "x_indicator": 200,
         # "x_indicator_text_config": dict(
         #     fraction_x=0.95,
         #     fraction_y=0.020,
@@ -381,7 +428,73 @@ def read_qe_data(file_path):
         axis=1
     )
 
-    return data
+    ### systematics
+    def collect_results(base_dir: Path, model_dirs: list[Path]):
+        rows = []
+
+        for base in [base_dir / d for d in model_dirs]:
+            base = Path(base)
+            if not base.exists():
+                continue
+
+            for noise_dir in base.iterdir():
+                if not noise_dir.is_dir():
+                    continue
+
+                model_name_map = {
+                    "scratch": "Scratch",
+                    "full": "Nominal",
+                }
+
+                model_name = model_name_map[base.name]
+                noise_name = noise_dir.name
+
+                for syst_dir in noise_dir.glob("merged_syst_*"):
+                    try:
+                        # ---------- read files ----------
+                        with open(syst_dir / "event_counts.json") as f:
+                            event_counts = json.load(f)
+                        with open(syst_dir / "systematics.json") as f:
+                            syst = json.load(f)
+                        unfolding = pd.read_csv(syst_dir / "unfolding.csv")
+                        # ---------- pairing ----------
+                        k = event_counts["All Four True"]["Count"]
+                        N = event_counts["All Four True"]["Total"]
+
+                        p = k / N
+                        pairing = 100.0 * p
+                        pairing_unc = 100.0 * math.sqrt(p * (1.0 - p) / N)
+                        # ---------- concurrence + uncertainty ----------
+                        conc_row = unfolding.loc[
+                            unfolding["name"] == "Concurrence"
+                            ].iloc[0]
+                        unc_up = conc_row["uncertainty_up"]
+                        unc_dn = conc_row["uncertainty_down"]
+                        concurrence = conc_row["value"]
+                        precision = (unc_up + unc_dn) / 2.0 / concurrence
+                        rows.append({
+                            "model_name": model_name,
+                            "model_pretty": model_name,
+                            "noise_name": noise_name,
+                            "syst_jes": syst.get("syst_jes", 0.0),
+                            "syst_met_px": syst.get("syst_met_px", 0.0),
+                            "syst_met_py": syst.get("syst_met_py", 0.0),
+                            "pairing": pairing,
+                            "pairing_unc": pairing_unc,
+                            "precision": precision,
+                        })
+                    except Exception as e:
+                        print(f"[WARN] Skipping {syst_dir}: {e}")
+        return pd.DataFrame(rows)
+
+    syst_df = collect_results(Path('data/QE/systematics'),["full", "scratch"])
+    # df = collect_results(Path('data/QE/systematics'), ["full"])
+    syst_df.sort_values(["model_name", "noise_name"]).reset_index(drop=True)
+
+    syst_df['pairing_norm'] = (syst_df["pairing"] - syst_df.groupby("model_pretty")["pairing"].transform("mean")) / syst_df['pairing_unc']
+    syst_df['precision_norm'] = (syst_df["precision"] - syst_df.groupby("model_pretty")["precision"].transform("mean")) * 100
+
+    return data, syst_df
 
 
 def plot_qe_results(
@@ -772,16 +885,6 @@ def read_bsm_data(folder_path):
         syst_df["jes_shift_percent"] = syst_df["noise"] * 100
         syst_df["pairing_eff_percent"] = syst_df["pairing_eff"] * 100
         syst_df["pairing_eff_unc_percent"] = syst_df["pairing_eff_unc"] * 100
-
-        # def _normalized(col):
-        #     grouped = syst_df.groupby("model_pretty")[col]
-        #     mean = grouped.transform("mean")
-        #     std = grouped.transform(lambda s: s.std(ddof=0))
-        #     std_safe = std.replace(0, np.nan).fillna(1.0)
-        #     return (syst_df[col] - mean) / std_safe
-        #
-        # syst_df["sic_norm"] = _normalized("sic_max")
-        # syst_df["pairing_norm"] = _normalized("pairing_eff_percent")
 
         syst_df["sic_norm"] = (syst_df["sic_max"] - syst_df.groupby("model_pretty")["sic_max"].transform("mean")) \
                               / syst_df["sic_unc"]
@@ -1398,9 +1501,14 @@ def plot_final_paper_figures(
     results = {}
 
     if qe_data is not None:
+        if isinstance(qe_data, tuple):
+            qe_sum, qe_syst = qe_data
+        else:
+            qe_sum, qe_syst = qe_data, None
+
         opts = figure_options.get("qe", {})
         results["qe"] = plot_qe_results(
-            qe_data,
+            qe_sum,
             output_root=opts.get("output_root", output_root),
             file_format=opts.get("file_format", file_format),
             dpi=opts.get("dpi", dpi),
