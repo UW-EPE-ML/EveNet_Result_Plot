@@ -104,27 +104,6 @@ DEFAULT_QE_CONFIG = {
         "style": DEFAULT_BAR_STYLE,
     },
     "systematics": {
-        "sic": {
-            "fig_size": (13, 2.25),
-            "style": PlotStyle(
-                base_font_size=20.0, tick_label_size=19.0, axis_label_size=19.0,
-                legend_size=17.0, legend_anchor=(0.13, 0.07), legend_loc="lower left",
-            ),
-            "x_label": r"$\Delta_\mathrm{SIC} = (\mathrm{SIC}-\mu_\mathrm{SIC})/\sigma_\mathrm{SIC}$",
-            # "cmap": "coolwarm",
-            "cmap": LinearSegmentedColormap.from_list(
-                "custom_jes",
-                ["#3F5EFB", "#E5ECF6", "#FC466B", ],  # low → mid → high
-                N=256
-            ),
-            "colorbar_label": r"$\alpha_\mathrm{JES}$ [%]",
-            "models": ["Nominal", "Scratch"],
-            "metric_col": "sic_norm",
-            "unc_col": "sic_unc",
-            "color_col": "jes_shift_percent",
-            "suffix": "sic",
-            "label": "SIC (normalized)",
-        },
         "pairing": {
             "fig_size": (13, 2.25),
             "style": PlotStyle(
@@ -132,7 +111,6 @@ DEFAULT_QE_CONFIG = {
                 legend_size=17.0, legend_anchor=(0.88, 0.07), legend_loc="lower right",
             ),
             "x_label": r"$\Delta_\epsilon^\mathrm{pair} = (\epsilon^\mathrm{pair}-\mu_\epsilon^\mathrm{pair})/\sigma_\epsilon^\mathrm{pair}$",
-            # "cmap": "coolwarm",
             "cmap": LinearSegmentedColormap.from_list(
                 "custom_jes",
                 ["#3F5EFB", "#E5ECF6", "#FC466B", ],  # low → mid → high
@@ -141,10 +119,38 @@ DEFAULT_QE_CONFIG = {
             "colorbar_label": r"$\alpha_\mathrm{JES}$ [%]",
             "models": ["Nominal", "Scratch"],
             "metric_col": "pairing_norm",
-            "unc_col": "pairing_eff_unc_percent",
-            "color_col": "jes_shift_percent",
+            "unc_col": "pairing_unc",
+            "color_col": "syst_jes",
             "suffix": "pair",
             "label": "Pairing efficiency (normalized)",
+            "noise_names": [
+                {"name": "jes_only", "label": "JES", "color_col": "syst_jes"},
+                {"name": "met_only", "label": "MET", "color_col": "syst_met_px"},
+            ],
+        },
+        "precision": {
+            "fig_size": (13, 2.25),
+            "style": PlotStyle(
+                base_font_size=20.0, tick_label_size=19.0, axis_label_size=19.0,
+                legend_size=17.0, legend_anchor=(0.88, 0.07), legend_loc="lower right",
+            ),
+            "x_label": r"$\Delta_\mathrm{precision} = (\sigma_D-\mu_{\sigma_D})/\sigma_{\sigma_D}$",
+            "cmap": LinearSegmentedColormap.from_list(
+                "custom_precision",
+                ["#3F5EFB", "#E5ECF6", "#FC466B", ],
+                N=256
+            ),
+            "colorbar_label": "Systematic shift",
+            "models": ["Nominal", "Scratch"],
+            "metric_col": "precision_norm",
+            "unc_col": "pairing_unc",
+            "color_col": "syst_jes",
+            "suffix": "precision",
+            "label": "Precision (normalized)",
+            "noise_names": [
+                {"name": "jes_only", "label": "JES", "color_col": "syst_jes"},
+                {"name": "met_only", "label": "MET", "color_col": "syst_met_px"},
+            ],
         },
     },
 }
@@ -411,6 +417,58 @@ def plot_task_legend(
 def convert_epochs_to_steps(epoch, train_size, batch_size_per_GPU=1024, GPUs=16):
     effective_step = (epoch * train_size * 1000 / (batch_size_per_GPU * GPUs))
     return effective_step
+
+
+def _iter_systematic_noise_cases(metric_name: str, syst_cfg: dict, data=None):
+    """Yield systematic plotting cases including optional noise_name filters.
+
+    Each case carries the suffix used for saving plots, the color column, and
+    the filtered dataset (if a ``noise_name`` is specified and available).
+    """
+
+    base_suffix = syst_cfg.get("suffix", metric_name)
+    noise_entries = syst_cfg.get("noise_names") or [None]
+
+    for entry in noise_entries:
+        if isinstance(entry, dict):
+            noise_name = entry.get("name")
+            noise_label = entry.get("label", noise_name)
+            color_col = entry.get("color_col", syst_cfg.get("color_col", "jes_shift_percent"))
+            suffix = entry.get("suffix") or (f"{base_suffix}_{noise_name}" if noise_name else base_suffix)
+        else:
+            noise_name = entry
+            noise_label = entry
+            color_col = syst_cfg.get("color_col", "jes_shift_percent")
+            suffix = f"{base_suffix}_{noise_name}" if noise_name else base_suffix
+
+        subset = data
+        if data is not None and noise_name is not None and isinstance(data, pd.DataFrame):
+            if "noise_name" in data.columns:
+                subset = data[data["noise_name"] == noise_name]
+
+        yield {
+            "suffix": suffix,
+            "color_col": color_col,
+            "noise_name": noise_name,
+            "noise_label": noise_label,
+            "label": syst_cfg.get("label", metric_name),
+            "data": subset,
+        }
+
+
+def _prepare_systematic_cases(systematics_cfg: dict, systematics_data):
+    """Expand systematic config into concrete plotting cases."""
+
+    cases = []
+    for metric_name, syst_cfg in systematics_cfg.items():
+        for case in _iter_systematic_noise_cases(metric_name, syst_cfg, data=systematics_data):
+            if case.get("data") is None:
+                continue
+            if hasattr(case.get("data"), "empty") and case["data"].empty:
+                continue
+            case.update({"metric_name": metric_name, "config": syst_cfg})
+            cases.append(case)
+    return cases
 
 
 def read_qe_data(file_path):
@@ -1056,28 +1114,36 @@ def plot_bsm_results(
 
     systematic_output = {}
     if systematics_data is not None and not systematics_data.empty:
-        for metric_name, syst_cfg in cfg["systematics"].items():
+        syst_cases = _prepare_systematic_cases(cfg["systematics"], systematics_data)
+        for case in syst_cases:
+            syst_cfg = case["config"]
             syst_style = _resolve_style(style, syst_cfg.get("style"))
             syst_scale = fig_scale if fig_scale is not None else (syst_style.figure_scale if syst_style else base_scale)
             fig_syst, ax_syst, active_syst = plot_systematic_scatter(
-                systematics_data,
+                case["data"],
                 model_order=syst_cfg.get("models", cfg["models"]),
                 metric_col=syst_cfg.get("metric_col", "sic_norm"),
                 unc_col=syst_cfg.get("unc_col", "sic_unc"),
-                color_col=syst_cfg.get("color_col", "jes_shift_percent"),
+                color_col=case.get("color_col", syst_cfg.get("color_col", "jes_shift_percent")),
                 **{k: v for k, v in syst_cfg.items() if
-                   k not in {"style", "models", "metric_col", "unc_col", "color_col", "suffix"}},
+                   k not in {"style", "models", "metric_col", "unc_col", "color_col", "suffix", "noise_names"}},
                 style=syst_style,
                 fig_scale=syst_scale,
                 fig_aspect=fig_aspect,
             )
-            suffix = syst_cfg.get("suffix", metric_name)
+            suffix = case.get("suffix") or syst_cfg.get("suffix", case["metric_name"])
             fig_syst.savefig(
                 os.path.join(plot_dir, _with_ext(f"systematics_{suffix}_scatter", file_format)),
                 bbox_inches="tight",
                 **_save_kwargs(file_format, dpi),
             )
-            systematic_output[metric_name] = {"fig": fig_syst, "axes": [ax_syst], "active_models": active_syst}
+            systematic_output[suffix] = {
+                "fig": fig_syst,
+                "axes": [ax_syst],
+                "active_models": active_syst,
+                "metric_name": case["metric_name"],
+                "noise_name": case.get("noise_name"),
+            }
 
     plot_task_legend(
         plot_dir=plot_dir,
@@ -1110,6 +1176,7 @@ def plot_bsm_results(
 
 def plot_qe_results_webpage(
         data,
+        systematics_data=None,
         *,
         output_root: str = "plot",
         file_format: str = "pdf",
@@ -1125,6 +1192,7 @@ def plot_qe_results_webpage(
         # Set to an empty list if heads are not applicable for QE.
         "heads": ["Cls", "Cls+Asn"],
         "train_sizes": [15, 148, 1475, 2950],
+        "systematics": DEFAULT_QE_CONFIG.get("systematics", {}),
     }
 
     qe_heads = QE_CONFIG["heads"]
@@ -1149,6 +1217,7 @@ def plot_qe_results_webpage(
 
     results = plot_qe_results(
         data,
+        systematics_data=systematics_data,
         output_root=output_root,
         file_format=file_format,
         dpi=dpi,
@@ -1158,6 +1227,17 @@ def plot_qe_results_webpage(
         fig_scale=fig_scale,
         fig_aspect=fig_aspect,
     )
+
+    systematics_paths = []
+    if results.get("systematics"):
+        syst_cases = _prepare_systematic_cases(QE_CONFIG["systematics"], systematics_data)
+        for case in syst_cases:
+            suffix = case.get("suffix") or case.get("metric_name")
+            if suffix not in results["systematics"]:
+                continue
+            systematics_paths.append(
+                os.path.join(plot_dir, _with_ext(f"systematics_{suffix}_scatter", file_format))
+            )
 
     return {
         "legend": legend_path,
@@ -1170,6 +1250,7 @@ def plot_qe_results_webpage(
             os.path.join(plot_dir, _with_ext("deltaD_scatter", file_format)),
             os.path.join(plot_dir, _with_ext("deltaD_bar", file_format)),
         ],
+        "systematics": systematics_paths,
     }
 
 
@@ -1227,6 +1308,17 @@ def plot_bsm_results_webpage(
         fig_aspect=fig_aspect,
     )
 
+    systematics_paths = []
+    if results.get("systematics"):
+        syst_cases = _prepare_systematic_cases(BSM_CONFIG["systematics"], systematics_data)
+        for case in syst_cases:
+            suffix = case.get("suffix") or case.get("metric_name")
+            if suffix not in results["systematics"]:
+                continue
+            systematics_paths.append(
+                os.path.join(plot_dir, _with_ext(f"systematics_{suffix}_scatter", file_format))
+            )
+
     return {
         "legend": legend_path,
         "loss": [os.path.join(plot_dir, _with_ext(f"loss_{head}", file_format)) for head in loss_names],
@@ -1239,12 +1331,7 @@ def plot_bsm_results_webpage(
             os.path.join(plot_dir, _with_ext("sic_bar", file_format)),
             os.path.join(plot_dir, _with_ext("sic_scatter", file_format)),
         ],
-        "systematics": [
-            os.path.join(plot_dir, _with_ext(
-                f"systematics_{BSM_CONFIG['systematics'][name].get('suffix', name)}_scatter", file_format
-            ))
-            for name in BSM_CONFIG["systematics"].keys()
-        ] if results.get("systematics") else [],
+        "systematics": systematics_paths,
     }
 
 
@@ -1509,6 +1596,7 @@ def plot_final_paper_figures(
         opts = figure_options.get("qe", {})
         results["qe"] = plot_qe_results(
             qe_sum,
+            systematics_data=qe_syst,
             output_root=opts.get("output_root", output_root),
             file_format=opts.get("file_format", file_format),
             dpi=opts.get("dpi", dpi),
