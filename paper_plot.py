@@ -557,6 +557,7 @@ def read_qe_data(file_path):
 
 def plot_qe_results(
         data,
+        systematics_data=None,
         *,
         output_root: str = "plot",
         file_format: str = "pdf",
@@ -739,6 +740,40 @@ def plot_qe_results(
         **_save_kwargs(file_format, dpi),
     )
 
+    systematic_output = {}
+    if systematics_data is not None and not systematics_data.empty:
+        syst_cases = _prepare_systematic_cases(cfg["systematics"], systematics_data)
+        for case in syst_cases:
+            syst_cfg = case["config"]
+            syst_style = _resolve_style(style, syst_cfg.get("style"))
+            syst_scale = fig_scale if fig_scale is not None else (
+                syst_style.figure_scale if syst_style else base_scale)
+            fig_syst, ax_syst, active_syst = plot_systematic_scatter(
+                case["data"],
+                model_order=syst_cfg.get("models", cfg["models"]),
+                metric_col=syst_cfg.get("metric_col", "pairing_norm"),
+                unc_col=syst_cfg.get("unc_col", "pairing_unc"),
+                color_col=case.get("color_col", syst_cfg.get("color_col", "syst_jes")),
+                **{k: v for k, v in syst_cfg.items() if
+                   k not in {"style", "models", "metric_col", "unc_col", "color_col", "suffix", "noise_names"}},
+                style=syst_style,
+                fig_scale=syst_scale,
+                fig_aspect=fig_aspect,
+            )
+            suffix = case.get("suffix") or syst_cfg.get("suffix", case["metric_name"])
+            fig_syst.savefig(
+                os.path.join(plot_dir, _with_ext(f"systematics_{suffix}_scatter", file_format)),
+                bbox_inches="tight",
+                **_save_kwargs(file_format, dpi),
+            )
+            systematic_output[suffix] = {
+                "fig": fig_syst,
+                "axes": [ax_syst],
+                "active_models": active_syst,
+                "metric_name": case["metric_name"],
+                "noise_name": case.get("noise_name"),
+            }
+
     plot_task_legend(
         plot_dir=plot_dir,
         model_order=cfg["models"],
@@ -764,6 +799,7 @@ def plot_qe_results(
             "scatter": {"fig": fig_delta_scatter, "axes": [ax_delta_scatter], "active_models": active_delta},
             "bar": {"fig": fig_delta_bar, "axes": [ax_delta_bar], "active_models": active_delta},
         },
+        "systematics": systematic_output,
     }
 
 
