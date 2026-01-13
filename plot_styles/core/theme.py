@@ -39,6 +39,8 @@ class PlotStyle:
     full_axis: bool = True
     legend_anchor: tuple[float, float] | None = None
     legend_loc: str | None = None
+    cms_label_fontsize: float | None = None
+    cms_label_y_start: float | None = None
 
     def _resolved_sizes(self) -> dict:
         tick_size = self.tick_label_size or self.base_font_size * 0.9

@@ -28,12 +28,14 @@ def plot_legend(
         y_gap: float = 0.07,
         style: PlotStyle | None = None,
         in_figure: bool = False,
+        CMS_label: str | None = None,
 ):
     """Attach stacked legends above the figure.
 
     ``legends`` controls which groups are drawn. Valid entries are
     ``"calibration"``, ``"dataset"``, ``"heads"``, ``"models"``.
     """
+    y_start_origin: float = y_start
     if legends is None:
         legends = ["calibration", "dataset", "heads", "models"]
 
@@ -42,6 +44,16 @@ def plot_legend(
         style.legend_size
         if style is not None and style.legend_size is not None
         else plt.rcParams.get("legend.fontsize", 14)
+    )
+    cms_label_fontsize = (
+        style.cms_label_fontsize
+        if style is not None and style.cms_label_fontsize is not None
+        else 1.5 * legend_fontsize
+    )
+    cms_label_y_start = (
+        style.cms_label_y_start
+        if style is not None and style.cms_label_y_start is not None
+        else 2 - y_start_origin
     )
 
     # Count total legend rows that will be drawn
@@ -55,13 +67,15 @@ def plot_legend(
     if in_figure:
         # --- Original behavior: stacked above the axes with fixed spacing ---
         # y_start and y_gap come from function args
+        x_start = 0.5 if not CMS_label else 0.99
+        anchor = "upper center" if not CMS_label else "upper right"
         def add_legend(handles, labels, ncol, fontsize=legend_fontsize):
             nonlocal y_start
             leg = fig.legend(
                 handles,
                 labels,
-                loc="upper center",
-                bbox_to_anchor=(0.5, y_start),
+                loc=anchor,
+                bbox_to_anchor=(x_start, y_start),
                 ncol=ncol,
                 frameon=False,
                 fontsize=fontsize,
@@ -160,6 +174,17 @@ def plot_legend(
         labels = ["Calibration", "Calibrated", "Uncalibrated"]
         add_legend(handles, labels, ncol=3)
 
+    if CMS_label:
+        fig.text(
+            0.02,
+            cms_label_y_start,
+            CMS_label,
+            transform=fig.transFigure,
+            ha="left",
+            va="top",
+            fontsize=cms_label_fontsize,
+            fontweight="bold",
+        )
 
 def add_ci_legend(
         fig,

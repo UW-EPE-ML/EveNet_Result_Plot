@@ -9,6 +9,7 @@ from plot_styles.core.legend import plot_legend
 from plot_styles.core.style_axis import apply_nature_axis_style
 from plot_styles.style import MODEL_COLORS
 
+
 def boosted_alpha(mX, mY, mH=125.0, B0=1.5, B1=3.0):
     """
     Mass-only boostedness estimator for X -> Y H, Y -> bb.
@@ -42,8 +43,8 @@ def boosted_alpha(mX, mY, mH=125.0, B0=1.5, B1=3.0):
 
     # Two-body momentum of Y in X rest frame
     pY = np.zeros_like(mX)
-    term1 = mX**2 - (mY + mH)**2
-    term2 = mX**2 - (mY - mH)**2
+    term1 = mX ** 2 - (mY + mH) ** 2
+    term2 = mX ** 2 - (mY - mH) ** 2
     pY[valid] = np.sqrt(term1[valid] * term2[valid]) / (2.0 * mX[valid])
 
     # Boost proxy
@@ -54,6 +55,7 @@ def boosted_alpha(mX, mY, mH=125.0, B0=1.5, B1=3.0):
     alpha = np.clip((B - B0) / (B1 - B0), 0.0, 1.0)
 
     return alpha
+
 
 def _merge_configs(default: dict, override: dict | None) -> dict:
     if override is None:
@@ -332,7 +334,7 @@ def plot_unrolled_grid_with_winner_and_ratios(
             linewidth=cutflow_cfg.get("linewidth", 0.5),
             zorder=cutflow_cfg.get("zorder", 1),
         )
-        ax_cutflow.set_ylabel(cutflow_cfg.get("ylabel", "Passed"), fontsize=label_fontsize_y)
+        ax_cutflow.set_ylabel(cutflow_cfg.get("ylabel", ""), fontsize=label_fontsize_y)
         if cutflow_cfg.get("log", False):
             ax_cutflow.set_yscale("log")
         draw_block_separators(ax_cutflow, block_edges, cfg["block_separator"])
@@ -392,6 +394,7 @@ def plot_unrolled_grid_with_winner_and_ratios(
             rotation=win_cfg.get("ylabel_rotation", 0),
             labelpad=win_cfg.get("ylabel_pad", 15),
             va="center",
+            fontsize=label_fontsize_y
         )
 
         draw_block_separators(ax_winner, block_edges, cfg["block_separator"])
@@ -431,7 +434,7 @@ def plot_unrolled_grid_with_winner_and_ratios(
                 ylabel = f"Δ vs {base}"
             else:
                 ylabel = f"log / {base}"
-        axr.set_ylabel(ylabel)
+        axr.set_ylabel(ylabel, fontsize=label_fontsize_y)
         if rcfg.get("y_log", False):
             axr.set_yscale("log")
 
@@ -465,9 +468,9 @@ def plot_unrolled_grid_with_winner_and_ratios(
         legends=["models"],
         style=style,
         in_figure=True,
-        y_start=1.01 if xb.get("show", True) else 1.01
+        y_start=1.01 if xb.get("show", True) else 1.01,
+        CMS_label="2016 CMS Open Data Simulation",
     )
-
 
     fig.subplots_adjust(
         **cfg.get("subplot_adjust", {})
