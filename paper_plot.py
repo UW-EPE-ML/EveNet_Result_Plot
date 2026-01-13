@@ -327,6 +327,7 @@ DEFAULT_GRID_CONFIG = {
         "hspace": 0,
         "height_ratios": {
             "main": 2.2,
+            "cutflow": 0.7,
             "winner": 0.4,
             "ratio": 0.8,
         },
@@ -371,6 +372,17 @@ DEFAULT_GRID_CONFIG = {
             "ylabel": "Win",
             "ylabel_rotation": 90,
             "ylabel_pad": 15,
+        },
+        "cutflow": {
+            "enabled": True,
+            "ylabel": "Passed",
+            "color": "0.7",
+            "edgecolor": "0.2",
+            "alpha": 0.85,
+            "linewidth": 0.5,
+            "bar_width": 0.9,
+            "zorder": 1,
+            "log": False,
         },
         "ratios": [],
         "ratio_line": {
@@ -1827,6 +1839,7 @@ def _collect_grid_series(
 
 def plot_grid_results(
         grid_data: pd.DataFrame,
+        cutflow_df: pd.DataFrame | None = None,
         *,
         output_root: str = "plot",
         file_format: str = "pdf",
@@ -1834,6 +1847,8 @@ def plot_grid_results(
         style: PlotStyle | None = None,
         config: dict | None = None,
 ):
+    if isinstance(grid_data, tuple):
+        grid_data, cutflow_df = grid_data
     cfg = _merge_configs(DEFAULT_GRID_CONFIG, config)
     plot_dir = os.path.join(output_root, cfg.get("output_subdir", "Grid"))
     os.makedirs(plot_dir, exist_ok=True)
@@ -1865,6 +1880,7 @@ def plot_grid_results(
                 points,
                 sic_by_model,
                 unc_by_model=unc_by_model,
+                cutflow_df=cutflow_df,
                 config=plot_config,
                 style=style,
             )
@@ -1884,6 +1900,7 @@ def plot_grid_results(
 
 def plot_grid_results_webpage(
         grid_data: pd.DataFrame,
+        cutflow_df: pd.DataFrame | None = None,
         *,
         output_root: str = "plot",
         file_format: str = "pdf",
@@ -1893,6 +1910,7 @@ def plot_grid_results_webpage(
 ):
     results = plot_grid_results(
         grid_data,
+        cutflow_df,
         output_root=output_root,
         file_format=file_format,
         dpi=dpi,
@@ -2013,8 +2031,13 @@ def plot_final_paper_figures(
 
     if grid_data is not None:
         opts = figure_options.get("grid", {})
+        if isinstance(grid_data, tuple):
+            grid_df, cutflow_df = grid_data
+        else:
+            grid_df, cutflow_df = grid_data, None
         results["grid"] = plot_grid_results(
-            grid_data,
+            grid_df,
+            cutflow_df,
             output_root=opts.get("output_root", output_root),
             file_format=opts.get("file_format", file_format),
             dpi=opts.get("dpi", dpi),
@@ -2091,7 +2114,7 @@ def read_grid_data(file_path):
 
     cutflow_df = pd.DataFrame(rows).sort_values(["m_X", "m_Y"]).reset_index(drop=True)
 
-    return selected_grid_df
+    return selected_grid_df, cutflow_df
 
 
 if __name__ == '__main__':
