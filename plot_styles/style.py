@@ -16,14 +16,26 @@
 #     "SPANet":  "#817F85",   # same as Ref.
 # }
 
-MODEL_COLORS = {
+BASE_MODEL_COLORS = {
     "SSL":      "#EDA4A1",   # distinct muted teal-green (large separation)
     "Nominal":  "#5F8FD9",   # fixed
     "Ablation": "#3E5F78",   # darker blue-grey for strong contrast
     "Scratch":  "#E3C565",   # fixed
     "Ref.":     "#9A9A9A",   # neutral grey
     "SPANet":   "#9A9A9A",   # same grey for grouping
+    "XGBoost":  "#3E5F78",
+    "TabPFN":   "#9A9A9A",
 }
+
+MODEL_COLORS = dict(BASE_MODEL_COLORS)
+MODEL_COLORS.update({
+    "evenet-full": BASE_MODEL_COLORS["Nominal"],
+    "evenet-scratch": BASE_MODEL_COLORS["Scratch"],
+    "evenet-pretrain": BASE_MODEL_COLORS.get("SSL", BASE_MODEL_COLORS["Nominal"]),
+    "pretrain_param": BASE_MODEL_COLORS.get("SSL", BASE_MODEL_COLORS["Nominal"]),
+    "xgb": BASE_MODEL_COLORS["XGBoost"],
+    "tabpfn": BASE_MODEL_COLORS["TabPFN"],
+})
 
 MODEL_PRETTY = {
     "SSL": "SSL",
@@ -32,6 +44,14 @@ MODEL_PRETTY = {
     "Scratch": "Scratch",
     "Ref.": "Ref",
     "SPANet": "SPANet",
+    "XGBoost": "XGBoost",
+    "TabPFN": "TabPFN",
+    "evenet-full": "Nominal",
+    "evenet-scratch": "Scratch",
+    "evenet-pretrain": "Pretrain",
+    "pretrain_param": "Pretrain (param)",
+    "xgb": "XGBoost",
+    "tabpfn": "TabPFN",
 }
 
 QE_DATASET_MARKERS = {
