@@ -327,7 +327,6 @@ DEFAULT_GRID_CONFIG = {
         "hspace": 0,
         "height_ratios": {
             "main": 2.2,
-            "cutflow": 0.7,
             "winner": 0.4,
             "ratio": 0.8,
         },
@@ -337,6 +336,7 @@ DEFAULT_GRID_CONFIG = {
         "y_main_log": True,
         "tick_fontsize_top": 13,
         "tick_fontsize_bottom": 10,
+        "tick_fontsize_cutflow": None,
         "tick_rotation_top": 45,
         "label_fontsize": None,
         "label_fontsize_top": None,
