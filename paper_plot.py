@@ -384,6 +384,16 @@ DEFAULT_GRID_CONFIG = {
             "alpha": 0.45,
             "zorder": 1,
         },
+        "boost": {
+            "enabled": False,
+            "B0": 1.5,
+            "B1": 3.0,
+            "mH": 125.0,
+            "base_color": "gray",
+            "alpha_min": 0.0,
+            "alpha_max": 0.6,
+            "zorder": 0.5,
+        },
         # "tight_layout": {"pad": 0.2},
         "subplot_adjust": {
             "top": 0.85, "bottom": 0.08,
