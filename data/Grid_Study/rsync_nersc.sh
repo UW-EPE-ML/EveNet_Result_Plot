@@ -10,4 +10,4 @@ rsync -Pavz \
   nersc:"$base_dir" "$script_dir"
 
 
-rsync -Pavz "nersc:/pscratch/sd/t/tihsu/database/Grid_Study_CMS_OpenData_bbWW_HWW/data/cutflow.json" "$script_dir"
+rsync -Pavz "nersc:/pscratch/sd/t/tihsu/database/Grid_Study_CMS_OpenData_bbWW_HWW/data/cutflow.json" "$script_dir/method_arxiv"
