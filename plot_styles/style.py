@@ -23,18 +23,19 @@ BASE_MODEL_COLORS = {
     "Scratch":  "#E3C565",   # fixed
     "Ref.":     "#9A9A9A",   # neutral grey
     "SPANet":   "#9A9A9A",   # same grey for grouping
-    "XGBoost":  "#3E5F78",
+    "XGBoost":  "#34183E",
     "TabPFN":   "#9A9A9A",
 }
 
 MODEL_COLORS = dict(BASE_MODEL_COLORS)
 MODEL_COLORS.update({
-    "evenet-full": BASE_MODEL_COLORS["Nominal"],
-    "evenet-scratch": BASE_MODEL_COLORS["Scratch"],
-    "evenet-pretrain": BASE_MODEL_COLORS.get("SSL", BASE_MODEL_COLORS["Nominal"]),
-    "pretrain_param": BASE_MODEL_COLORS.get("SSL", BASE_MODEL_COLORS["Nominal"]),
-    "xgb": BASE_MODEL_COLORS["XGBoost"],
-    "tabpfn": BASE_MODEL_COLORS["TabPFN"],
+    "evenet-scratch_individual": BASE_MODEL_COLORS["Scratch"],
+    "evenet-pretrain_individual": BASE_MODEL_COLORS["Nominal"],
+    "evenet-pretrain_param": BASE_MODEL_COLORS.get("SSL", BASE_MODEL_COLORS["Nominal"]),
+    "evenet-scratch_param": BASE_MODEL_COLORS.get("Scratch", BASE_MODEL_COLORS["Nominal"]),
+    "xgb_individual": BASE_MODEL_COLORS["XGBoost"],
+    "xgb_param": BASE_MODEL_COLORS["XGBoost"],
+    "tabpfn_individual": BASE_MODEL_COLORS["TabPFN"],
 })
 
 MODEL_PRETTY = {
@@ -47,11 +48,13 @@ MODEL_PRETTY = {
     "XGBoost": "XGBoost",
     "TabPFN": "TabPFN",
     "evenet-full": "Nominal",
-    "evenet-scratch": "Scratch",
-    "evenet-pretrain": "Pretrain",
-    "pretrain_param": "Pretrain (param)",
-    "xgb": "XGBoost",
-    "tabpfn": "TabPFN",
+    "evenet-scratch_individual": "Scratch",
+    "evenet-pretrain_individual": "Full",
+    "evenet-pretrain_param": "Full (param)",
+    "evenet-scratch_param": "Scratch (param)",
+    "xgb_individual": "XGBoost",
+    "xgb_param": "XGBoost (param)",
+    "tabpfn_individual": "TabPFN",
 }
 
 QE_DATASET_MARKERS = {
