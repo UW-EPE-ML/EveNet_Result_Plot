@@ -322,6 +322,7 @@ DEFAULT_GRID_CONFIG = {
     "unc_col": "max_sic_unc",
     "output_subdir": "Grid",
     "base_plot_config": {
+        "models": [],
         "figsize": (15, 6),
         "hspace": 0.0,
         "height_ratios": {
@@ -332,6 +333,7 @@ DEFAULT_GRID_CONFIG = {
         "x_top_label": r"$m_Y$ [GeV]",
         "x_bottom_label": r"$m_X$ [GeV]",
         "y_main_label": "SIC",
+        "y_main_log": False,
         "tick_fontsize_top": 10,
         "tick_fontsize_bottom": 11,
         "tick_rotation_top": 90,
@@ -345,9 +347,44 @@ DEFAULT_GRID_CONFIG = {
             "show_ticks": True,
             "label_every": 2,
         },
+        "block_separator": {
+            "enabled": True,
+            "color": "0.6",
+            "linestyle": "--",
+            "linewidth": 0.8,
+        },
+        "line": {
+            "marker": "o",
+            "markersize": 2.5,
+            "linewidth": 1.2,
+        },
         "style": None,
         "apply_axis_style": True,
-        "legend_main": {"fontsize": None},
+        "legend_main": {
+            "enabled": True,
+            "ncols": 4,
+            "fontsize": None,
+            "loc": "upper left",
+        },
+        "winner": {
+            "enabled": True,
+            "ylabel": "Win",
+            "ylabel_rotation": 90,
+            "ylabel_pad": 38,
+        },
+        "ratios": [],
+        "ratio_line": {
+            "marker": "o",
+            "markersize": 2.0,
+            "linewidth": 1.0,
+        },
+        "unc": {
+            "enabled": True,
+            "models": [],
+            "alpha": 0.25,
+            "zorder": 1,
+        },
+        "tight_layout": {"pad": 0.2},
     },
     "plots": {
         "individual": {
