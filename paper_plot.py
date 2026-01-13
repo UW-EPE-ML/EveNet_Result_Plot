@@ -18,6 +18,7 @@ from plot_styles.ad_bar import plot_ad_sig_summary, plot_ad_gen_summary
 from plot_styles.core.legend import plot_legend, plot_only_legend
 from plot_styles.core.theme import PlotStyle, scaled_fig_size, use_style
 from plot_styles.core.style_axis import apply_nature_axis_style
+from plot_styles.grid_unrolled import plot_unrolled_grid_with_winner_and_ratios
 from plot_styles.style import MODEL_COLORS, HEAD_LINESTYLES
 
 BITMAP_FORMATS = {"png", "jpg", "jpeg", "tiff", "bmp"}
@@ -313,6 +314,88 @@ DEFAULT_AD_CONFIG = {
         "include_uncalibrated": False,
         "with_legend": False,
         "style": PlotStyle(base_font_size=20.0, tick_label_size=19.0, full_axis=True),
+    },
+}
+
+DEFAULT_GRID_CONFIG = {
+    "metric_col": "max_sic",
+    "unc_col": "max_sic_unc",
+    "output_subdir": "Grid",
+    "plots": {
+        "individual": {
+            "output_name": "grid_sic_individual",
+            "title": "Grid SIC (individual)",
+            "series": [
+                {
+                    "model": "evenet-pretrain",
+                    "type": "individual",
+                    "label": "EveNet Pretrain",
+                    "color": "#5F8FD9",
+                },
+                {
+                    "model": "evenet-scratch",
+                    "type": "individual",
+                    "label": "EveNet Scratch",
+                    "color": "#E3C565",
+                },
+                {
+                    "model": "xgb",
+                    "type": "individual",
+                    "label": "XGBoost",
+                    "color": "#3E5F78",
+                },
+                {
+                    "model": "tabpfn",
+                    "type": "individual",
+                    "label": "TabPFN",
+                    "color": "#9A9A9A",
+                },
+            ],
+            "plot_config": {
+                "ratios": [
+                    {"baseline": "XGBoost", "mode": "ratio", "ylabel": None, "reference_line": True},
+                    {"baseline": "TabPFN", "mode": "ratio", "ylabel": None, "reference_line": True},
+                ],
+                "unc": {"enabled": True},
+            },
+        },
+        "mixed": {
+            "output_name": "grid_sic_mixed",
+            "title": "Grid SIC (pretrain individual + parametrized)",
+            "series": [
+                {
+                    "model": "evenet-pretrain",
+                    "type": "individual",
+                    "label": "EveNet Pretrain (ind)",
+                    "color": "#5F8FD9",
+                },
+                {
+                    "model": "xgb",
+                    "type": "param",
+                    "label": "XGBoost (param)",
+                    "color": "#3E5F78",
+                },
+                {
+                    "model": "evenet-scratch",
+                    "type": "param",
+                    "label": "EveNet Scratch (param)",
+                    "color": "#E3C565",
+                },
+                {
+                    "model": "evenet-pretrain",
+                    "type": "param",
+                    "label": "EveNet Pretrain (param)",
+                    "color": "#9A9A9A",
+                },
+            ],
+            "plot_config": {
+                "ratios": [
+                    {"baseline": "XGBoost (param)", "mode": "ratio", "ylabel": None, "reference_line": True},
+                    {"baseline": "EveNet Pretrain (param)", "mode": "ratio", "ylabel": None, "reference_line": True},
+                ],
+                "unc": {"enabled": True},
+            },
+        },
     },
 }
 
@@ -1607,11 +1690,149 @@ def plot_ad_results_webpage(
     return outputs
 
 
+def _collect_grid_series(
+        grid_data: pd.DataFrame,
+        *,
+        series_specs: list[dict],
+        metric_col: str,
+        unc_col: str,
+):
+    selections = []
+    for spec in series_specs:
+        mask = grid_data["model"].eq(spec["model"])
+        if spec.get("type") is not None:
+            mask &= grid_data["type"].eq(spec["type"])
+        selections.append(mask)
+
+    if not selections:
+        return [], {}, {}, [], {}
+
+    selected = grid_data[np.logical_or.reduce(selections)]
+    if selected.empty:
+        return [], {}, {}, [], {}
+
+    points = sorted({(row.m_X, row.m_Y) for row in selected.itertuples(index=False)})
+    sic_by_model = {}
+    unc_by_model = {}
+    model_order = []
+    color_map = {}
+
+    for spec in series_specs:
+        label = spec.get("label", spec["model"])
+        model_order.append(label)
+        if "color" in spec:
+            color_map[label] = spec["color"]
+
+        df_model = grid_data[grid_data["model"].eq(spec["model"])]
+        if spec.get("type") is not None:
+            df_model = df_model[df_model["type"].eq(spec["type"])]
+
+        grouped_metric = df_model.groupby(["m_X", "m_Y"])[metric_col].mean()
+        grouped_unc = (
+            df_model.groupby(["m_X", "m_Y"])[unc_col].mean()
+            if unc_col in df_model
+            else pd.Series(dtype=float)
+        )
+        metric_map = {key: value for key, value in grouped_metric.items()}
+        unc_map = {key: value for key, value in grouped_unc.items()}
+
+        sic_by_model[label] = {point: metric_map.get(point, np.nan) for point in points}
+        unc_by_model[label] = {point: unc_map.get(point, np.nan) for point in points}
+
+    return points, sic_by_model, unc_by_model, model_order, color_map
+
+
+def plot_grid_results(
+        grid_data: pd.DataFrame,
+        *,
+        output_root: str = "plot",
+        file_format: str = "pdf",
+        dpi: int | None = None,
+        style: PlotStyle | None = None,
+        config: dict | None = None,
+):
+    cfg = _merge_configs(DEFAULT_GRID_CONFIG, config)
+    plot_dir = os.path.join(output_root, cfg.get("output_subdir", "Grid"))
+    os.makedirs(plot_dir, exist_ok=True)
+
+    outputs = {}
+    for name, plot_cfg in cfg.get("plots", {}).items():
+        points, sic_by_model, unc_by_model, model_order, color_map = _collect_grid_series(
+            grid_data,
+            series_specs=plot_cfg.get("series", []),
+            metric_col=cfg.get("metric_col", "max_sic"),
+            unc_col=cfg.get("unc_col", "max_sic_unc"),
+        )
+        if not points:
+            continue
+
+        plot_config = dict(plot_cfg.get("plot_config", {}))
+        plot_config["models"] = model_order
+        if color_map:
+            plot_config["color_map"] = color_map
+
+        unc_cfg = dict(plot_config.get("unc", {}))
+        if unc_cfg.get("enabled", True) and not unc_cfg.get("models"):
+            unc_cfg["models"] = model_order
+        plot_config["unc"] = unc_cfg
+
+        with use_style(style):
+            fig, axes = plot_unrolled_grid_with_winner_and_ratios(
+                points,
+                sic_by_model,
+                unc_by_model=unc_by_model,
+                config=plot_config,
+                style=style,
+            )
+
+        output_name = plot_cfg.get("output_name", f"grid_{name}")
+        output_path = os.path.join(plot_dir, _with_ext(output_name, file_format))
+        fig.savefig(output_path, **_save_kwargs(file_format, dpi))
+        outputs[name] = {
+            "fig": fig,
+            "axes": axes,
+            "path": output_path,
+            "title": plot_cfg.get("title", name),
+        }
+
+    return outputs
+
+
+def plot_grid_results_webpage(
+        grid_data: pd.DataFrame,
+        *,
+        output_root: str = "plot",
+        file_format: str = "pdf",
+        dpi: int | None = None,
+        style: PlotStyle | None = None,
+        config: dict | None = None,
+):
+    results = plot_grid_results(
+        grid_data,
+        output_root=output_root,
+        file_format=file_format,
+        dpi=dpi,
+        style=style,
+        config=config,
+    )
+
+    output_dir = Path(output_root)
+    merged_cfg = _merge_configs(DEFAULT_GRID_CONFIG, config)
+    plot_dir = output_dir / merged_cfg.get("output_subdir", "Grid")
+
+    return {
+        name: os.path.join(str(plot_dir), _with_ext(cfg.get("output_name", f"grid_{name}"), file_format))
+        for name, cfg in merged_cfg.get("plots", {}).items()
+        if name in results
+    }
+
+
 def plot_final_paper_figures(
         *,
         qe_data=None,
         bsm_data=None,
         ad_data=None,
+        grid_data=None,
         output_root: str = "plot",
         file_format: str = "pdf",
         dpi: int | None = None,
@@ -1628,7 +1849,7 @@ def plot_final_paper_figures(
 
     Parameters
     ----------
-    qe_data, bsm_data, ad_data : DataFrame or None
+    qe_data, bsm_data, ad_data, grid_data : DataFrame or None
         Provide the pre-loaded data for each task. Any task set to
         ``None`` is skipped so you can iteratively build a figure set.
     include_legends : bool
@@ -1640,7 +1861,7 @@ def plot_final_paper_figures(
         ``PlotStyle`` field (font sizes, scaling, etc.) per figure by
         supplying a mapping under ``figure_options``.
     figure_options : dict | None
-        Optional mapping keyed by ``"qe"``, ``"bsm"``, or ``"ad"``.
+        Optional mapping keyed by ``"qe"``, ``"bsm"``, ``"ad"``, or ``"grid"``.
         Each entry may include any keyword accepted by the respective
         plotting helper (e.g., ``fig_scale``, ``fig_aspect``,
         ``bar_train_size``) plus a ``style`` override.
@@ -1704,6 +1925,17 @@ def plot_final_paper_figures(
             fig_scale=opts.get("fig_scale"),
             fig_aspect=opts.get("fig_aspect"),
             config=task_configs.get("ad"),
+        )
+
+    if grid_data is not None:
+        opts = figure_options.get("grid", {})
+        results["grid"] = plot_grid_results(
+            grid_data,
+            output_root=opts.get("output_root", output_root),
+            file_format=opts.get("file_format", file_format),
+            dpi=opts.get("dpi", dpi),
+            style=_resolve_style(style, opts.get("style")),
+            config=task_configs.get("grid"),
         )
 
     return results

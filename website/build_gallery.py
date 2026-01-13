@@ -30,13 +30,16 @@ matplotlib.use("Agg")
 from paper_plot import (  # noqa: E402  # pylint: disable=wrong-import-position
     DEFAULT_AD_CONFIG,
     DEFAULT_BSM_CONFIG,
+    DEFAULT_GRID_CONFIG,
     DEFAULT_QE_CONFIG,
     _prepare_systematic_cases,
     read_ad_data,
     read_bsm_data,
+    read_grid_data,
     read_qe_data,
     plot_ad_results_webpage,
     plot_bsm_results_webpage,
+    plot_grid_results_webpage,
     plot_qe_results_webpage,
 )
 from plot_styles.sic import compute_sic_with_unc  # noqa: E402  # pylint: disable=wrong-import-position
@@ -507,6 +510,7 @@ def main():
     parser.add_argument("--skip-qe", action="store_true", help="Skip QC/QE plots")
     parser.add_argument("--skip-bsm", action="store_true", help="Skip BSM plots")
     parser.add_argument("--skip-ad", action="store_true", help="Skip anomaly-detection plots")
+    parser.add_argument("--skip-grid", action="store_true", help="Skip grid-study plots")
     args = parser.parse_args()
 
     output_dir = Path(args.output_dir)
@@ -725,6 +729,37 @@ def main():
         )
     else:
         print("Skipping BSM plots (data missing or flag set)")
+
+    if not args.skip_grid and Path("data/Grid_Study/method_arxiv").exists():
+        print("Rendering grid-study plots…")
+        grid_data = read_grid_data("data/Grid_Study/method_arxiv")
+        grid_outputs = plot_grid_results_webpage(
+            grid_data,
+            output_root=str(plots_root),
+            file_format=args.format,
+            dpi=args.dpi,
+        )
+        grid_plots = []
+        for name, plot_cfg in DEFAULT_GRID_CONFIG.get("plots", {}).items():
+            if name not in grid_outputs:
+                continue
+            grid_plots.append(
+                {
+                    "src": str(Path(grid_outputs[name]).relative_to(output_dir)),
+                    "caption": plot_cfg.get("title", f"Grid: {name}"),
+                }
+            )
+        if grid_plots:
+            sections.append(
+                _section(
+                    "grid",
+                    "Grid study (mass scan)",
+                    "Unrolled grid plots for the mX/mY scan with max SIC and uncertainties.",
+                    grid_plots,
+                )
+            )
+    else:
+        print("Skipping grid-study plots (data missing or flag set)")
 
     if not args.skip_ad and Path("data/AD").exists():
         print("Rendering anomaly-detection plots…")

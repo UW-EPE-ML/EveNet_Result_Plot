@@ -13,11 +13,13 @@ from pathlib import Path
 from paper_plot import (
     DEFAULT_AD_CONFIG,
     DEFAULT_BSM_CONFIG,
+    DEFAULT_GRID_CONFIG,
     DEFAULT_QE_CONFIG,
     PlotStyle,
     plot_final_paper_figures,
     read_ad_data,
     read_bsm_data,
+    read_grid_data,
     read_qe_data,
 )
 
@@ -32,6 +34,7 @@ def build_task_configs():
         "qe": deepcopy(DEFAULT_QE_CONFIG),
         "bsm": deepcopy(DEFAULT_BSM_CONFIG),
         "ad": deepcopy(DEFAULT_AD_CONFIG),
+        "grid": deepcopy(DEFAULT_GRID_CONFIG),
     }
 
 
@@ -62,6 +65,9 @@ def build_figure_options():
             "fig_aspect": None,
             "with_legend": False,
         },
+        "grid": {
+            "output_root": ROOT,
+        },
     }
 
 
@@ -71,6 +77,7 @@ def main():
     qe_data = read_qe_data("data/QE_results_table.csv")
     bsm_data = read_bsm_data("data/BSM")
     ad_data = read_ad_data("data/AD")
+    grid_data = read_grid_data("data/Grid_Study/method_arxiv")
 
     # Baseline styling that can be further overridden per task or per figure.
     base_style = PlotStyle(base_font_size=16, axis_label_size=16, tick_label_size=14, legend_size=13)
@@ -79,6 +86,7 @@ def main():
         qe_data=qe_data,
         bsm_data=bsm_data,
         ad_data=ad_data,
+        grid_data=grid_data,
         output_root=str(ROOT),
         file_format="pdf",
         include_legends=False,
