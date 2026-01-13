@@ -39,6 +39,7 @@ def plot_ad_sig_summary(
         dpi: int | None = None,
         file_format: str | None = None,
         style: PlotStyle | None = None,
+        include_uncalibrated: bool = True,
 ):
     # Which models appear?
     detected = sorted(df["model"].unique())
@@ -52,7 +53,7 @@ def plot_ad_sig_summary(
     channels = channels_order if channels_order else sorted(df["channel"].unique())
     n_channels = len(channels)
 
-    total_bars_per_group = n_models * 2  # cal + uncal
+    total_bars_per_group = n_models * 2 if include_uncalibrated else n_models  # cal + uncal
     bar_width = 0.8 / total_bars_per_group
     # -------------------------------------------------------
     # Plotting
@@ -64,7 +65,8 @@ def plot_ad_sig_summary(
     # benchmark_xpos = None
     base_xpos = None
     for i, model in enumerate(model_list):
-        for j, calibrated in enumerate([False, True]):
+        cal_list = [False, True] if include_uncalibrated else [True]
+        for j, calibrated in enumerate(cal_list):
 
             vals, lo_err, hi_err = [], [], []
 
@@ -90,6 +92,9 @@ def plot_ad_sig_summary(
             xpos = (
                     np.arange(n_channels)
                     + (i * 2 + j - total_bars_per_group / 2 + 0.5) * bar_width
+            ) if include_uncalibrated else (
+                    np.arange(n_channels)
+                    + (i + j - total_bars_per_group / 2 + 0.5) * bar_width
             )
 
             if i == 0 and j == 0:
@@ -131,7 +136,7 @@ def plot_ad_sig_summary(
     # sns.despine(ax=ax)
 
     if y_ref is not None:
-        x_ref = (base_xpos[1] + bar_width) / (n_channels - 1 + bar_width)
+        x_ref = (base_xpos[1] + bar_width * 0) / (n_channels - 1 + bar_width)
 
         ax.axhline(
             y=y_ref,
@@ -162,7 +167,7 @@ def plot_ad_sig_summary(
             fig,
             active_models=model_list,
             model_colors=MODEL_COLORS,
-            legends=["calibration", "models"],
+            legends=["calibration", "models"] if include_uncalibrated else ["models"],
             style=style,
             in_figure=True,
         )

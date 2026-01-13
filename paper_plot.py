@@ -110,7 +110,7 @@ DEFAULT_QE_CONFIG = {
                 base_font_size=20.0, tick_label_size=19.0, axis_label_size=19.0,
                 legend_size=17.0, legend_anchor=(0.88, 0.07), legend_loc="lower right",
             ),
-            "x_label": r"$\Delta_\epsilon^\mathrm{pair} = (\epsilon^\mathrm{pair}-\mu_\epsilon^\mathrm{pair})/\sigma_\epsilon^\mathrm{pair}$",
+            "x_label": r"$\Delta_\epsilon^\mathrm{pair} = (\epsilon^\mathrm{pair}-\mu_\epsilon^\mathrm{pair})$",
             "cmap": LinearSegmentedColormap.from_list(
                 "custom_jes",
                 ["#3F5EFB", "#E5ECF6", "#FC466B", ],  # low → mid → high
@@ -120,12 +120,15 @@ DEFAULT_QE_CONFIG = {
             "models": ["Nominal", "Scratch"],
             "metric_col": "pairing_norm",
             "unc_col": "pairing_unc",
-            "color_col": "syst_jes",
+            # "color_col": "syst_jes",
             "suffix": "pair",
             "label": "Pairing efficiency (normalized)",
             "noise_names": [
                 {"name": "jes_only", "label": "JES", "color_col": "syst_jes"},
-                {"name": "met_only", "label": "MET", "color_col": "syst_met_px"},
+                {
+                    "name": "met_only", "label": "MET", "color_col": "syst_met", "clim_min": 0.0, "clim_max": 5.0,
+                    "colorbar_label": r"$E_{T}^\mathrm{miss}$ [GeV]",
+                },
             ],
         },
         "precision": {
@@ -144,12 +147,15 @@ DEFAULT_QE_CONFIG = {
             "models": ["Nominal", "Scratch"],
             "metric_col": "precision_norm",
             "unc_col": "precision_unc",
-            "color_col": "syst_jes",
+            # "color_col": "syst_jes",
             "suffix": "precision",
             "label": "Precision (normalized)",
             "noise_names": [
                 {"name": "jes_only", "label": "JES", "color_col": "syst_jes"},
-                {"name": "met_only", "label": "MET", "color_col": "syst_met_px"},
+                {
+                    "name": "met_only", "label": "MET", "color_col": "syst_met", "clim_min": 0.0, "clim_max": 5.0,
+                    "colorbar_label": r"$E_{T}^\mathrm{miss}$ [GeV]",
+                },
             ],
         },
     },
@@ -244,7 +250,7 @@ DEFAULT_BSM_CONFIG = {
                 base_font_size=20.0, tick_label_size=19.0, axis_label_size=19.0,
                 legend_size=17.0, legend_anchor=(0.88, 0.07), legend_loc="lower right",
             ),
-            "x_label": r"$\Delta_\epsilon^\mathrm{pair} = (\epsilon^\mathrm{pair}-\mu_\epsilon^\mathrm{pair})/\sigma_\epsilon^\mathrm{pair}$",
+            "x_label": r"$\Delta_\epsilon^\mathrm{pair} = (\epsilon^\mathrm{pair}-\mu_\epsilon^\mathrm{pair})$",
             # "cmap": "coolwarm",
             "cmap": LinearSegmentedColormap.from_list(
                 "custom_jes",
@@ -284,6 +290,7 @@ DEFAULT_AD_CONFIG = {
         "style": PlotStyle(base_font_size=20.0, tick_label_size=19.0, legend_size=19.0, full_axis=True),
         "fig_size": (13, 6),
         "with_legend": False,
+        "include_uncalibrated": False,
     },
     "gen_mmd": {
         "metric": "mmd",
@@ -430,11 +437,19 @@ def _iter_systematic_noise_cases(metric_name: str, syst_cfg: dict, data=None):
     noise_entries = syst_cfg.get("noise_names") or [None]
 
     for entry in noise_entries:
+        extra = {}
+
         if isinstance(entry, dict):
-            noise_name = entry.get("name")
-            noise_label = entry.get("label", noise_name)
-            color_col = entry.get("color_col", syst_cfg.get("color_col", "jes_shift_percent"))
-            suffix = entry.get("suffix") or (f"{base_suffix}_{noise_name}" if noise_name else base_suffix)
+            extra = dict(entry)  # shallow copy, safe
+            noise_name = extra.get("name")
+            noise_label = extra.get("label", noise_name)
+            color_col = extra.get(
+                "color_col",
+                syst_cfg.get("color_col", "jes_shift_percent")
+            )
+            suffix = extra.get("suffix") or (
+                f"{base_suffix}_{noise_name}" if noise_name else base_suffix
+            )
         else:
             noise_name = entry
             noise_label = entry
@@ -442,11 +457,16 @@ def _iter_systematic_noise_cases(metric_name: str, syst_cfg: dict, data=None):
             suffix = f"{base_suffix}_{noise_name}" if noise_name else base_suffix
 
         subset = data
-        if data is not None and noise_name is not None and isinstance(data, pd.DataFrame):
-            if "noise_name" in data.columns:
-                subset = data[data["noise_name"] == noise_name]
+        if (
+                data is not None
+                and noise_name is not None
+                and isinstance(data, pd.DataFrame)
+                and "noise_name" in data.columns
+        ):
+            subset = data[data["noise_name"] == noise_name]
 
         yield {
+            '_EXTRA': {**extra},  # 👈 pass through arbitrary user-defined keys
             "suffix": suffix,
             "color_col": color_col,
             "noise_name": noise_name,
@@ -537,6 +557,7 @@ def read_qe_data(file_path):
                             "syst_jes": syst.get("syst_jes", 0.0) * 100,
                             "syst_met_px": syst.get("syst_met_px", 0.0),
                             "syst_met_py": syst.get("syst_met_py", 0.0),
+                            "syst_met": math.sqrt(syst.get("syst_met_px", 0.0) ** 2 + syst.get("syst_met_py", 0.0)),
                             "pairing": pairing,
                             "pairing_unc": pairing_unc,
                             "precision": precision,
@@ -549,11 +570,13 @@ def read_qe_data(file_path):
     # df = collect_results(Path('data/QE/systematics'), ["full"])
     syst_df.sort_values(["model_name", "noise_name"]).reset_index(drop=True)
 
-    syst_df['pairing_norm'] = (syst_df["pairing"] - syst_df.groupby("model_pretty")["pairing"].transform("mean")) / \
-                              syst_df['pairing_unc']
-    syst_df['precision_norm'] = (syst_df["precision"] - syst_df.groupby("model_pretty")["precision"].transform(
-        "mean")) # / syst_df.groupby("model_pretty")["precision"].transform( "mean")
-    syst_df['precision_unc'] = 1
+    grp = syst_df.groupby(["model_name", "noise_name"])
+
+    syst_df["pairing_norm"] = (syst_df["pairing"] - grp["pairing"].transform("mean")) #  / syst_df["pairing_unc"]
+
+    syst_df["precision_norm"] = (syst_df["precision"] - grp["precision"].transform("mean"))
+
+    syst_df["precision_unc"] = 1
 
     return data, syst_df
 
@@ -748,6 +771,7 @@ def plot_qe_results(
         syst_cases = _prepare_systematic_cases(cfg["systematics"], systematics_data)
         for case in syst_cases:
             syst_cfg = case["config"]
+            syst_cfg.update({k: v for k, v in case['_EXTRA'].items() if k not in {'name', 'label', 'color_col'}})
             syst_style = _resolve_style(style, syst_cfg.get("style"))
             syst_scale = fig_scale if fig_scale is not None else (
                 syst_style.figure_scale if syst_style else base_scale)
@@ -986,8 +1010,7 @@ def read_bsm_data(folder_path):
         syst_df["sic_norm"] = (syst_df["sic_max"] - syst_df.groupby("model_pretty")["sic_max"].transform("mean")) \
                               / syst_df["sic_unc"]
         syst_df["pairing_norm"] = (syst_df["pairing_eff_percent"] - syst_df.groupby("model_pretty")[
-            "pairing_eff_percent"].transform("mean")) \
-                                  / syst_df["pairing_eff_unc_percent"]
+            "pairing_eff_percent"].transform("mean")) # / syst_df["pairing_eff_unc_percent"]
 
     return df, syst_df
 
@@ -1518,6 +1541,7 @@ def plot_ad_results(
         fig_scale=sig_scale,
         fig_aspect=fig_aspect,
         fig_size=cfg["sig"].get("fig_size", None),
+        include_uncalibrated=cfg["sig"].get("include_uncalibrated", True)
     )
 
     gen_outputs = []

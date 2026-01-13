@@ -71,6 +71,8 @@ def plot_systematic_scatter(
         colorbar_label: str = "",
         style: PlotStyle | None = None,
         with_legend: bool = True,
+        clim_min=-2.0,
+        clim_max=2.0,
 ):
     """Plot a JES systematics beeswarm using a normalized metric."""
 
@@ -149,7 +151,7 @@ def plot_systematic_scatter(
             zorder=3,
         )
 
-    ax.axvline(0, color="0.8", lw=1.5 * scale, ls="--", zorder=0)
+    # ax.axvline(0, color="0.8", lw=1.5 * scale, ls="--", zorder=0)
     ax.set_yticks(range(len(active_models)))
     ax.set_yticklabels([MODEL_PRETTY[name] for name in active_models])
     ax.set_xlabel(x_label)
@@ -160,7 +162,6 @@ def plot_systematic_scatter(
     apply_nature_axis_style(ax, style=style)
     if scatter is not None:
         # ---- Force global color range ----
-        clim_min, clim_max = -2.0, 2.0
         scatter.set_clim(clim_min, clim_max)  # update the scatter normalization
 
         divider = make_axes_locatable(ax)
