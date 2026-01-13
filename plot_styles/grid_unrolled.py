@@ -168,6 +168,7 @@ def plot_unrolled_grid_with_winner_and_ratios(
         points,
         sic_by_model,
         unc_by_model=None,
+        cutflow_df=None,
         config=None,
         *,
         style=None,
@@ -197,12 +198,20 @@ def plot_unrolled_grid_with_winner_and_ratios(
 
     ratios_cfg = cfg.get("ratios", [])
     winner_enabled = cfg.get("winner", {}).get("enabled", True)
+    cutflow_cfg = cfg.get("cutflow", {})
+    cutflow_enabled = cutflow_cfg.get("enabled", False) and cutflow_df is not None
 
-    nrows = 1 + (1 if winner_enabled else 0) + len(ratios_cfg)
+    nrows = 1 + (1 if cutflow_enabled else 0) + (1 if winner_enabled else 0) + len(ratios_cfg)
     hr_main = cfg["height_ratios"]["main"]
+    hr_cutflow = cfg["height_ratios"].get("cutflow", 0.5)
     hr_winner = cfg["height_ratios"]["winner"]
     hr_ratio = cfg["height_ratios"]["ratio"]
-    height_ratios = [hr_main] + ([hr_winner] if winner_enabled else []) + [hr_ratio] * len(ratios_cfg)
+    height_ratios = [hr_main]
+    if cutflow_enabled:
+        height_ratios.append(hr_cutflow)
+    if winner_enabled:
+        height_ratios.append(hr_winner)
+    height_ratios += [hr_ratio] * len(ratios_cfg)
 
     fig, axes = plt.subplots(
         nrows=nrows,
@@ -221,8 +230,17 @@ def plot_unrolled_grid_with_winner_and_ratios(
         ax.set_xlim(-0.5, n_points - 0.5)
 
     ax_main = axes[0]
-    ax_winner = axes[1] if winner_enabled else None
-    ax_ratio_list = axes[(2 if winner_enabled else 1):]
+    ax_cutflow = axes[1] if cutflow_enabled else None
+    if winner_enabled:
+        ax_winner = axes[2] if cutflow_enabled else axes[1]
+    else:
+        ax_winner = None
+    ratio_start = 1
+    if cutflow_enabled:
+        ratio_start += 1
+    if winner_enabled:
+        ratio_start += 1
+    ax_ratio_list = axes[ratio_start:]
 
     if cfg.get("y_main_log", False):
         ax_main.set_yscale("log")
@@ -230,6 +248,8 @@ def plot_unrolled_grid_with_winner_and_ratios(
     boost_axes = [ax_main]
     # if ax_winner is not None:
     #     boost_axes.append(ax_winner)
+    if ax_cutflow is not None:
+        boost_axes.append(ax_cutflow)
     boost_axes.extend(ax_ratio_list)
     draw_boosted_background(
         boost_axes,
@@ -294,6 +314,28 @@ def plot_unrolled_grid_with_winner_and_ratios(
         )
 
     draw_block_separators(ax_main, block_edges, cfg["block_separator"])
+
+    if cutflow_enabled:
+        passed_lookup = {
+            (row["m_X"], row["m_Y"]): row["passed"]
+            for _, row in cutflow_df.iterrows()
+        }
+        passed_vals = np.array([passed_lookup.get(p, np.nan) for p in ordered], dtype=float)
+        ok = np.isfinite(passed_vals)
+        ax_cutflow.bar(
+            x[ok],
+            passed_vals[ok],
+            width=cutflow_cfg.get("bar_width", 0.9),
+            color=cutflow_cfg.get("color", "0.7"),
+            edgecolor=cutflow_cfg.get("edgecolor", "0.2"),
+            alpha=cutflow_cfg.get("alpha", 0.8),
+            linewidth=cutflow_cfg.get("linewidth", 0.5),
+            zorder=cutflow_cfg.get("zorder", 1),
+        )
+        ax_cutflow.set_ylabel(cutflow_cfg.get("ylabel", "Passed"), fontsize=label_fontsize_y)
+        if cutflow_cfg.get("log", False):
+            ax_cutflow.set_yscale("log")
+        draw_block_separators(ax_cutflow, block_edges, cfg["block_separator"])
 
     ax_top = ax_main.twiny()
     ax_top.set_xlim(ax_main.get_xlim())
@@ -411,7 +453,10 @@ def plot_unrolled_grid_with_winner_and_ratios(
         fontsize=label_fontsize_bottom,
     )
 
-    _apply_axis_style([ax_main, *ax_ratio_list], cfg.get("apply_axis_style", False), style)
+    axis_list = [ax_main, *ax_ratio_list]
+    if ax_cutflow is not None:
+        axis_list.append(ax_cutflow)
+    _apply_axis_style(axis_list, cfg.get("apply_axis_style", False), style)
 
     plot_legend(
         fig,
