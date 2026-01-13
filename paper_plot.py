@@ -1709,14 +1709,67 @@ def plot_final_paper_figures(
     return results
 
 
+def read_grid_data(file_path):
+    method_dir = Path(file_path)
+    rows = []
+
+    # Regex for MX / MY in filename
+    pattern = re.compile(r"MX-(?P<mx>[\d.]+)_MY-(?P<my>[\d.]+)")
+
+    for model_dir in method_dir.iterdir():
+        if not model_dir.is_dir():
+            continue
+
+        model_name = model_dir.name  # evenet-pretrain, xgb, ...
+
+        for json_file in model_dir.rglob("eval_metrics_*.json"):
+            match = pattern.search(json_file.name)
+            if match is None:
+                continue
+
+            m_X = float(match.group("mx"))
+            m_Y = float(match.group("my"))
+
+            # Determine type
+            parts = json_file.parts
+            if "individual" in parts:
+                run_type = "individual"
+            elif any(p.startswith("parametrized_reduce_factor_x_1_y_1") for p in parts):
+                run_type = "param"
+            else:
+                run_type = "unknown"
+
+            # Read JSON
+            with open(json_file) as f:
+                metrics = json.load(f)
+
+            rows.append({
+                "model": model_name,
+                "type": run_type,
+                "m_X": m_X,
+                "m_Y": m_Y,
+                "auc": metrics.get("auc"),
+                "max_sic": metrics.get("max_sic"),
+                "max_sic_unc": metrics.get("max_sic_unc"),
+                "trafo_bin_sig": metrics.get("trafo_bin_sig"),
+            })
+
+    grid_df = pd.DataFrame(rows)
+
+    return grid_df[grid_df['type'].isin(['individual', 'param'])]
+
+    pass
+
 if __name__ == '__main__':
     # qe_data = read_qe_data('data/QE_results_table.csv')
     # plot_qe_results(qe_data)
 
-    bsm_summary, bsm_systematics = read_bsm_data('data/BSM')
-    plot_bsm_results(bsm_summary, systematics_data=bsm_systematics)
+    # bsm_summary, bsm_systematics = read_bsm_data('data/BSM')
+    # plot_bsm_results(bsm_summary, systematics_data=bsm_systematics)
 
     # ad_data = read_ad_data("data/AD")
     # plot_ad_results(ad_data)
+
+    grid_data = read_grid_data("data/Grid_Study/method_arxiv")
 
     pass
