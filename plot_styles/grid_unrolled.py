@@ -124,6 +124,39 @@ def draw_block_separators(ax, block_edges, cfg_sep):
         )
 
 
+def draw_boosted_background(ax_list, ordered, cfg_boost):
+    if not cfg_boost.get("enabled", False):
+        return
+    mH = cfg_boost.get("mH", 125.0)
+    B0 = cfg_boost.get("B0", 1.5)
+    B1 = cfg_boost.get("B1", 3.0)
+    base_color = cfg_boost.get("base_color", "gray")
+    alpha_min = cfg_boost.get("alpha_min", 0.0)
+    alpha_max = cfg_boost.get("alpha_max", 0.6)
+    alpha_scale = cfg_boost.get("alpha_scale", None)
+    zorder = cfg_boost.get("zorder", 0.5)
+
+    mx_vals = np.array([mx for mx, _ in ordered], dtype=float)
+    my_vals = np.array([my for _, my in ordered], dtype=float)
+    alpha_base = boosted_alpha(mx_vals, my_vals, mH=mH, B0=B0, B1=B1)
+    if alpha_scale is not None:
+        alpha_base = np.clip(alpha_base * alpha_scale, 0.0, 1.0)
+    alphas = alpha_min + (alpha_max - alpha_min) * alpha_base
+
+    for ax in ax_list:
+        for idx, alpha in enumerate(alphas):
+            if alpha <= 0.0:
+                continue
+            ax.axvspan(
+                idx - 0.5,
+                idx + 0.5,
+                color=base_color,
+                alpha=float(alpha),
+                linewidth=0.0,
+                zorder=zorder,
+            )
+
+
 def _apply_axis_style(ax_list, apply_style, style):
     if not apply_style:
         return
@@ -193,6 +226,16 @@ def plot_unrolled_grid_with_winner_and_ratios(
 
     if cfg.get("y_main_log", False):
         ax_main.set_yscale("log")
+
+    boost_axes = [ax_main]
+    if ax_winner is not None:
+        boost_axes.append(ax_winner)
+    boost_axes.extend(ax_ratio_list)
+    draw_boosted_background(
+        boost_axes,
+        ordered,
+        cfg.get("boost", {}),
+    )
 
     line_cfg = cfg["line"]
     color_map = cfg.get("color_map") or line_cfg.get("colors") or {}
