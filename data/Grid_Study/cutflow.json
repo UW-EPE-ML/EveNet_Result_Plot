@@ -1,0 +1,526 @@
+{
+  "DYBJets_pt100to200": {
+    "passed": 50528,
+    "total": 8848155
+  },
+  "DYBJets_pt200toInf": {
+    "passed": 12746,
+    "total": 887122
+  },
+  "MX-1000_MY-100": {
+    "passed": 8909,
+    "total": 184000
+  },
+  "MX-1000_MY-125": {
+    "passed": 10121,
+    "total": 183999
+  },
+  "MX-1000_MY-150": {
+    "passed": 10889,
+    "total": 184000
+  },
+  "MX-1000_MY-190": {
+    "passed": 11665,
+    "total": 183999
+  },
+  "MX-1000_MY-250": {
+    "passed": 12716,
+    "total": 183999
+  },
+  "MX-1000_MY-300": {
+    "passed": 13927,
+    "total": 183998
+  },
+  "MX-1000_MY-350": {
+    "passed": 14812,
+    "total": 183999
+  },
+  "MX-1000_MY-400": {
+    "passed": 15613,
+    "total": 183997
+  },
+  "MX-1000_MY-450": {
+    "passed": 16416,
+    "total": 184000
+  },
+  "MX-1000_MY-500": {
+    "passed": 17716,
+    "total": 184000
+  },
+  "MX-1000_MY-60": {
+    "passed": 3538,
+    "total": 183999
+  },
+  "MX-1000_MY-600": {
+    "passed": 19309,
+    "total": 184000
+  },
+  "MX-1000_MY-70": {
+    "passed": 4708,
+    "total": 183064
+  },
+  "MX-1000_MY-700": {
+    "passed": 19655,
+    "total": 182124
+  },
+  "MX-1000_MY-80": {
+    "passed": 6070,
+    "total": 183998
+  },
+  "MX-1000_MY-800": {
+    "passed": 15683,
+    "total": 181192
+  },
+  "MX-1000_MY-90": {
+    "passed": 7423,
+    "total": 183257
+  },
+  "MX-240_MY-100": {
+    "passed": 2261,
+    "total": 183999
+  },
+  "MX-240_MY-60": {
+    "passed": 2099,
+    "total": 183999
+  },
+  "MX-240_MY-70": {
+    "passed": 2145,
+    "total": 184026
+  },
+  "MX-240_MY-80": {
+    "passed": 2168,
+    "total": 183998
+  },
+  "MX-240_MY-90": {
+    "passed": 2175,
+    "total": 184000
+  },
+  "MX-280_MY-100": {
+    "passed": 3515,
+    "total": 183998
+  },
+  "MX-280_MY-125": {
+    "passed": 3473,
+    "total": 183995
+  },
+  "MX-280_MY-150": {
+    "passed": 2644,
+    "total": 183998
+  },
+  "MX-280_MY-60": {
+    "passed": 3408,
+    "total": 183999
+  },
+  "MX-280_MY-70": {
+    "passed": 3408,
+    "total": 183999
+  },
+  "MX-280_MY-80": {
+    "passed": 3326,
+    "total": 182137
+  },
+  "MX-280_MY-90": {
+    "passed": 3388,
+    "total": 180254
+  },
+  "MX-300_MY-100": {
+    "passed": 4127,
+    "total": 183996
+  },
+  "MX-300_MY-125": {
+    "passed": 4091,
+    "total": 183998
+  },
+  "MX-300_MY-150": {
+    "passed": 3672,
+    "total": 184024
+  },
+  "MX-300_MY-60": {
+    "passed": 3980,
+    "total": 183997
+  },
+  "MX-300_MY-70": {
+    "passed": 4027,
+    "total": 183999
+  },
+  "MX-300_MY-80": {
+    "passed": 4094,
+    "total": 183998
+  },
+  "MX-300_MY-90": {
+    "passed": 4083,
+    "total": 184000
+  },
+  "MX-320_MY-100": {
+    "passed": 4852,
+    "total": 183998
+  },
+  "MX-320_MY-125": {
+    "passed": 4972,
+    "total": 183997
+  },
+  "MX-320_MY-150": {
+    "passed": 4674,
+    "total": 183997
+  },
+  "MX-320_MY-60": {
+    "passed": 4620,
+    "total": 183067
+  },
+  "MX-320_MY-70": {
+    "passed": 4671,
+    "total": 183999
+  },
+  "MX-320_MY-80": {
+    "passed": 4679,
+    "total": 183999
+  },
+  "MX-320_MY-90": {
+    "passed": 4805,
+    "total": 183068
+  },
+  "MX-360_MY-125": {
+    "passed": 6473,
+    "total": 183996
+  },
+  "MX-360_MY-60": {
+    "passed": 6054,
+    "total": 182129
+  },
+  "MX-360_MY-70": {
+    "passed": 6192,
+    "total": 183998
+  },
+  "MX-360_MY-80": {
+    "passed": 6192,
+    "total": 184000
+  },
+  "MX-400_MY-100": {
+    "passed": 8013,
+    "total": 184000
+  },
+  "MX-400_MY-150": {
+    "passed": 8177,
+    "total": 184000
+  },
+  "MX-400_MY-250": {
+    "passed": 5066,
+    "total": 183996
+  },
+  "MX-400_MY-60": {
+    "passed": 7758,
+    "total": 183998
+  },
+  "MX-400_MY-80": {
+    "passed": 7840,
+    "total": 183998
+  },
+  "MX-400_MY-90": {
+    "passed": 7861,
+    "total": 184000
+  },
+  "MX-500_MY-100": {
+    "passed": 11315,
+    "total": 183999
+  },
+  "MX-500_MY-125": {
+    "passed": 11602,
+    "total": 183996
+  },
+  "MX-500_MY-150": {
+    "passed": 11962,
+    "total": 183062
+  },
+  "MX-500_MY-250": {
+    "passed": 11810,
+    "total": 183998
+  },
+  "MX-500_MY-300": {
+    "passed": 9453,
+    "total": 176502
+  },
+  "MX-500_MY-60": {
+    "passed": 10149,
+    "total": 182125
+  },
+  "MX-500_MY-70": {
+    "passed": 10926,
+    "total": 183998
+  },
+  "MX-500_MY-80": {
+    "passed": 11084,
+    "total": 183061
+  },
+  "MX-500_MY-90": {
+    "passed": 11256,
+    "total": 183999
+  },
+  "MX-600_MY-100": {
+    "passed": 12841,
+    "total": 183998
+  },
+  "MX-600_MY-125": {
+    "passed": 13195,
+    "total": 184000
+  },
+  "MX-600_MY-150": {
+    "passed": 13915,
+    "total": 183999
+  },
+  "MX-600_MY-250": {
+    "passed": 15070,
+    "total": 181206
+  },
+  "MX-600_MY-300": {
+    "passed": 15378,
+    "total": 184000
+  },
+  "MX-600_MY-400": {
+    "passed": 11882,
+    "total": 184000
+  },
+  "MX-600_MY-60": {
+    "passed": 9586,
+    "total": 182130
+  },
+  "MX-600_MY-70": {
+    "passed": 11503,
+    "total": 183999
+  },
+  "MX-600_MY-80": {
+    "passed": 12255,
+    "total": 183999
+  },
+  "MX-600_MY-90": {
+    "passed": 12795,
+    "total": 183998
+  },
+  "MX-650_MY-100": {
+    "passed": 12814,
+    "total": 183998
+  },
+  "MX-650_MY-125": {
+    "passed": 13497,
+    "total": 183999
+  },
+  "MX-650_MY-150": {
+    "passed": 14308,
+    "total": 183999
+  },
+  "MX-650_MY-190": {
+    "passed": 15024,
+    "total": 183999
+  },
+  "MX-650_MY-250": {
+    "passed": 15949,
+    "total": 184000
+  },
+  "MX-650_MY-300": {
+    "passed": 16460,
+    "total": 184000
+  },
+  "MX-650_MY-350": {
+    "passed": 16344,
+    "total": 183997
+  },
+  "MX-650_MY-400": {
+    "passed": 15197,
+    "total": 183999
+  },
+  "MX-650_MY-450": {
+    "passed": 12682,
+    "total": 184000
+  },
+  "MX-650_MY-500": {
+    "passed": 8165,
+    "total": 183999
+  },
+  "MX-650_MY-60": {
+    "passed": 8508,
+    "total": 183996
+  },
+  "MX-650_MY-70": {
+    "passed": 10959,
+    "total": 183074
+  },
+  "MX-650_MY-80": {
+    "passed": 12114,
+    "total": 184000
+  },
+  "MX-650_MY-90": {
+    "passed": 12597,
+    "total": 183997
+  },
+  "MX-700_MY-100": {
+    "passed": 12780,
+    "total": 183999
+  },
+  "MX-700_MY-125": {
+    "passed": 13434,
+    "total": 183996
+  },
+  "MX-700_MY-150": {
+    "passed": 14015,
+    "total": 182127
+  },
+  "MX-700_MY-250": {
+    "passed": 16120,
+    "total": 183998
+  },
+  "MX-700_MY-300": {
+    "passed": 16989,
+    "total": 183999
+  },
+  "MX-700_MY-400": {
+    "passed": 17090,
+    "total": 183999
+  },
+  "MX-700_MY-500": {
+    "passed": 13345,
+    "total": 183997
+  },
+  "MX-700_MY-60": {
+    "passed": 7164,
+    "total": 178389
+  },
+  "MX-700_MY-70": {
+    "passed": 10080,
+    "total": 182133
+  },
+  "MX-700_MY-80": {
+    "passed": 11614,
+    "total": 184000
+  },
+  "MX-700_MY-90": {
+    "passed": 12391,
+    "total": 183080
+  },
+  "MX-800_MY-100": {
+    "passed": 12082,
+    "total": 183998
+  },
+  "MX-800_MY-125": {
+    "passed": 12642,
+    "total": 183061
+  },
+  "MX-800_MY-250": {
+    "passed": 15583,
+    "total": 183999
+  },
+  "MX-800_MY-300": {
+    "passed": 16645,
+    "total": 183999
+  },
+  "MX-800_MY-400": {
+    "passed": 18088,
+    "total": 182136
+  },
+  "MX-800_MY-500": {
+    "passed": 17996,
+    "total": 183999
+  },
+  "MX-800_MY-60": {
+    "passed": 5542,
+    "total": 183996
+  },
+  "MX-800_MY-600": {
+    "passed": 14566,
+    "total": 184000
+  },
+  "MX-800_MY-70": {
+    "passed": 7859,
+    "total": 184000
+  },
+  "MX-800_MY-80": {
+    "passed": 10006,
+    "total": 183999
+  },
+  "MX-800_MY-90": {
+    "passed": 11245,
+    "total": 183087
+  },
+  "MX-900_MY-100": {
+    "passed": 10463,
+    "total": 183997
+  },
+  "MX-900_MY-125": {
+    "passed": 11335,
+    "total": 183997
+  },
+  "MX-900_MY-150": {
+    "passed": 12081,
+    "total": 183999
+  },
+  "MX-900_MY-250": {
+    "passed": 14329,
+    "total": 183999
+  },
+  "MX-900_MY-300": {
+    "passed": 15149,
+    "total": 184000
+  },
+  "MX-900_MY-400": {
+    "passed": 17253,
+    "total": 184000
+  },
+  "MX-900_MY-500": {
+    "passed": 18972,
+    "total": 183999
+  },
+  "MX-900_MY-60": {
+    "passed": 4370,
+    "total": 183998
+  },
+  "MX-900_MY-600": {
+    "passed": 19176,
+    "total": 183999
+  },
+  "MX-900_MY-70": {
+    "passed": 6147,
+    "total": 184000
+  },
+  "MX-900_MY-700": {
+    "passed": 15283,
+    "total": 183999
+  },
+  "MX-900_MY-80": {
+    "passed": 7817,
+    "total": 184000
+  },
+  "MX-900_MY-90": {
+    "passed": 9421,
+    "total": 183997
+  },
+  "SingleTop_s_channel_lepon": {
+    "passed": 24809,
+    "total": 5471000
+  },
+  "SingleTop_t_channel_antitop": {
+    "passed": 39353,
+    "total": 30609000
+  },
+  "SingleTop_t_channel_top": {
+    "passed": 32398,
+    "total": 25457000
+  },
+  "VBFHtautau": {
+    "passed": 74,
+    "total": 1500000
+  },
+  "ggHtautau": {
+    "passed": 177,
+    "total": 6439000
+  },
+  "tW_antitop": {
+    "passed": 17697,
+    "total": 2554000
+  },
+  "tW_top": {
+    "passed": 16732,
+    "total": 2491000
+  },
+  "tt1l": {
+    "passed": 4081318,
+    "total": 144722000
+  }
+}

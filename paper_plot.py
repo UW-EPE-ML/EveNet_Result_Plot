@@ -2061,10 +2061,9 @@ def read_grid_data(file_path):
             })
 
     grid_df = pd.DataFrame(rows)
+    selected_grid_df = grid_df[grid_df['type'].isin(['individual', 'param'])]
 
-    return grid_df[grid_df['type'].isin(['individual', 'param'])]
-
-    pass
+    return selected_grid_df
 
 
 if __name__ == '__main__':
