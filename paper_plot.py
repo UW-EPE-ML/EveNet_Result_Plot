@@ -323,20 +323,20 @@ DEFAULT_GRID_CONFIG = {
     "output_subdir": "Grid",
     "base_plot_config": {
         "models": [],
-        "figsize": (15, 6),
-        "hspace": 0.0,
+        "figsize": (20, 8),
+        "hspace": 0,
         "height_ratios": {
             "main": 2.2,
-            "winner": 0.35,
-            "ratio": 1.0,
+            "winner": 0.4,
+            "ratio": 0.8,
         },
         "x_top_label": r"$m_Y$ [GeV]",
         "x_bottom_label": r"$m_X$ [GeV]",
         "y_main_label": "SIC",
-        "y_main_log": False,
-        "tick_fontsize_top": 10,
-        "tick_fontsize_bottom": 11,
-        "tick_rotation_top": 90,
+        "y_main_log": True,
+        "tick_fontsize_top": 13,
+        "tick_fontsize_bottom": 10,
+        "tick_rotation_top": 45,
         "label_fontsize": None,
         "label_fontsize_top": None,
         "label_fontsize_bottom": None,
@@ -351,95 +351,82 @@ DEFAULT_GRID_CONFIG = {
             "enabled": True,
             "color": "0.6",
             "linestyle": "--",
-            "linewidth": 0.8,
+            "linewidth": 1.5,
         },
         "line": {
             "marker": "o",
-            "markersize": 2.5,
-            "linewidth": 1.2,
+            "markersize": 4,
+            "linewidth": 2.5,
         },
         "style": None,
         "apply_axis_style": True,
         "legend_main": {
-            "enabled": True,
+            "enabled": False,
             "ncols": 4,
             "fontsize": None,
-            "loc": "upper left",
+            "loc": "lower right",
         },
         "winner": {
             "enabled": True,
             "ylabel": "Win",
             "ylabel_rotation": 90,
-            "ylabel_pad": 38,
+            "ylabel_pad": 15,
         },
         "ratios": [],
         "ratio_line": {
             "marker": "o",
-            "markersize": 2.0,
-            "linewidth": 1.0,
+            "markersize": 4,
+            "linewidth": 2.5,
         },
         "unc": {
             "enabled": True,
             "models": [],
-            "alpha": 0.25,
+            "alpha": 0.45,
             "zorder": 1,
         },
-        "tight_layout": {"pad": 0.2},
+        # "tight_layout": {"pad": 0.2},
+        "subplot_adjust": {
+            "top": 0.85, "bottom": 0.08,
+            "left": 0.05, "right": 0.98,
+        },
     },
     "plots": {
         "individual": {
+            # "style": PlotStyle(base_font_size=10.0, tick_label_size=9.0, full_axis=True),
             "output_name": "grid_sic_individual",
             "title": "Grid SIC (individual)",
             "series": [
                 {
                     "model": "evenet-pretrain",
                     "type": "individual",
-                    "label": "EveNet Pretrain",
-                    "color": MODEL_COLORS["evenet-pretrain"],
+                    "label": "Full",
+                    "color": MODEL_COLORS["evenet-pretrain_individual"],
                 },
                 {
                     "model": "evenet-scratch",
                     "type": "individual",
-                    "label": "EveNet Scratch",
-                    "color": MODEL_COLORS["evenet-scratch"],
+                    "label": "Scratch",
+                    "color": MODEL_COLORS["evenet-scratch_individual"],
                 },
                 {
                     "model": "xgb",
                     "type": "individual",
                     "label": "XGBoost",
-                    "color": MODEL_COLORS["xgb"],
+                    "color": MODEL_COLORS["xgb_individual"],
                 },
                 {
                     "model": "tabpfn",
                     "type": "individual",
-                    "label": "TabPFN",
-                    "color": MODEL_COLORS["tabpfn"],
+                    "label": "TabPFN v2.5",
+                    "color": MODEL_COLORS["tabpfn_individual"],
                 },
             ],
             "plot_config": {
-                "figsize": (15, 6),
-                "hspace": 0.0,
-                "height_ratios": {
-                    "main": 2.2,
-                    "winner": 0.35,
-                    "ratio": 1.0,
-                },
-                "x_top_label": r"$m_Y$ [GeV]",
-                "x_bottom_label": r"$m_X$ [GeV]",
-                "y_main_label": "SIC",
-                "tick_fontsize_top": 10,
-                "tick_fontsize_bottom": 11,
-                "tick_rotation_top": 90,
-                "x_top": {
-                    "show": True,
-                    "show_text": True,
-                    "show_ticks": True,
-                    "label_every": 2,
-                },
                 "apply_axis_style": True,
                 "ratios": [
-                    {"baseline": "XGBoost", "mode": "ratio", "ylabel": None, "reference_line": True},
-                    {"baseline": "TabPFN", "mode": "ratio", "ylabel": None, "reference_line": True},
+                    # {"baseline": "XGBoost", "mode": "ratio", "ylabel": "/XGB", "reference_line": True},
+                    # {"baseline": "TabPFN v2.5", "mode": "ratio", "ylabel": "/TabPFN", "reference_line": True},
+                    {"baseline": "Full", "mode": "ratio", "ylabel": "/ Full", "reference_line": True},
                 ],
                 "unc": {"enabled": True},
             },
@@ -451,52 +438,33 @@ DEFAULT_GRID_CONFIG = {
                 {
                     "model": "evenet-pretrain",
                     "type": "individual",
-                    "label": "EveNet Pretrain (ind)",
-                    "color": MODEL_COLORS["evenet-pretrain"],
+                    "label": "Full",
+                    "color": MODEL_COLORS["evenet-pretrain_individual"],
+                },
+                {
+                    "model": "evenet-pretrain",
+                    "type": "param",
+                    "label": "Full (param)",
+                    "color": MODEL_COLORS["evenet-pretrain_param"],
+                },
+                {
+                    "model": "evenet-scratch",
+                    "type": "param",
+                    "label": "Scratch (param)",
+                    "color": MODEL_COLORS["evenet-scratch_param"],
                 },
                 {
                     "model": "xgb",
                     "type": "param",
                     "label": "XGBoost (param)",
-                    "color": MODEL_COLORS["xgb"],
-                },
-                {
-                    "model": "evenet-scratch",
-                    "type": "param",
-                    "label": "EveNet Scratch (param)",
-                    "color": MODEL_COLORS["evenet-scratch"],
-                },
-                {
-                    "model": "evenet-pretrain",
-                    "type": "param",
-                    "label": "EveNet Pretrain (param)",
-                    "color": MODEL_COLORS["pretrain_param"],
+                    "color": MODEL_COLORS["xgb_param"],
                 },
             ],
             "plot_config": {
-                "figsize": (15, 6),
-                "hspace": 0.0,
-                "height_ratios": {
-                    "main": 2.2,
-                    "winner": 0.35,
-                    "ratio": 1.0,
-                },
-                "x_top_label": r"$m_Y$ [GeV]",
-                "x_bottom_label": r"$m_X$ [GeV]",
-                "y_main_label": "SIC",
-                "tick_fontsize_top": 10,
-                "tick_fontsize_bottom": 11,
-                "tick_rotation_top": 90,
-                "x_top": {
-                    "show": True,
-                    "show_text": True,
-                    "show_ticks": True,
-                    "label_every": 2,
-                },
-                "apply_axis_style": True,
                 "ratios": [
-                    {"baseline": "XGBoost (param)", "mode": "ratio", "ylabel": None, "reference_line": True},
-                    {"baseline": "EveNet Pretrain (param)", "mode": "ratio", "ylabel": None, "reference_line": True},
+                    # {"baseline": "XGBoost (param)", "mode": "ratio", "ylabel": "/XGB", "reference_line": True, "y_log": True},
+                    # {"baseline": "EveNet-Scratch (param)", "mode": "ratio", "ylabel": "/Scratch", "reference_line": True, "y_log": True},
+                    {"baseline": "Full", "mode": "ratio", "ylabel": "/ Full", "reference_line": True, "y_log": True},
                 ],
                 "unc": {"enabled": True},
             },
@@ -760,7 +728,7 @@ def read_qe_data(file_path):
 
     grp = syst_df.groupby(["model_name", "noise_name"])
 
-    syst_df["pairing_norm"] = (syst_df["pairing"] - grp["pairing"].transform("mean")) #  / syst_df["pairing_unc"]
+    syst_df["pairing_norm"] = (syst_df["pairing"] - grp["pairing"].transform("mean"))  # / syst_df["pairing_unc"]
 
     syst_df["precision_norm"] = (syst_df["precision"] - grp["precision"].transform("mean"))
 
@@ -1198,7 +1166,7 @@ def read_bsm_data(folder_path):
         syst_df["sic_norm"] = (syst_df["sic_max"] - syst_df.groupby("model_pretty")["sic_max"].transform("mean")) \
                               / syst_df["sic_unc"]
         syst_df["pairing_norm"] = (syst_df["pairing_eff_percent"] - syst_df.groupby("model_pretty")[
-            "pairing_eff_percent"].transform("mean")) # / syst_df["pairing_eff_unc_percent"]
+            "pairing_eff_percent"].transform("mean"))  # / syst_df["pairing_eff_unc_percent"]
 
     return df, syst_df
 
@@ -1880,6 +1848,7 @@ def plot_grid_results(
         if unc_cfg.get("enabled", True) and not unc_cfg.get("models"):
             unc_cfg["models"] = model_order
         plot_config["unc"] = unc_cfg
+        plot_config['raw_model_series'] = [f"{m['model']}_{m['type']}" for m in plot_cfg.get("series", [])]
 
         with use_style(style):
             fig, axes = plot_unrolled_grid_with_winner_and_ratios(
@@ -2096,6 +2065,7 @@ def read_grid_data(file_path):
     return grid_df[grid_df['type'].isin(['individual', 'param'])]
 
     pass
+
 
 if __name__ == '__main__':
     # qe_data = read_qe_data('data/QE_results_table.csv')

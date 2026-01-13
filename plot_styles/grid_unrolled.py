@@ -5,7 +5,55 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 from matplotlib.patches import Patch
 
+from plot_styles.core.legend import plot_legend
 from plot_styles.core.style_axis import apply_nature_axis_style
+from plot_styles.style import MODEL_COLORS
+
+def boosted_alpha(mX, mY, mH=125.0, B0=1.5, B1=3.0):
+    """
+    Mass-only boostedness estimator for X -> Y H, Y -> bb.
+
+    Parameters
+    ----------
+    mX : float or np.ndarray
+        Mass of X (GeV)
+    mY : float or np.ndarray
+        Mass of Y (GeV)
+    mH : float, optional
+        Higgs mass (default = 125 GeV)
+    B0 : float, optional
+        Boost scale where alpha ~ 0.5 (default = 1.5)
+    B1 : float, optional
+        Saturation scale (default = 3.0)
+
+    Returns
+    -------
+    alpha : float or np.ndarray
+        Boostedness in [0, 1]
+        0   -> fully resolved
+        1   -> very boosted
+    """
+
+    mX = np.asarray(mX, dtype=float)
+    mY = np.asarray(mY, dtype=float)
+
+    # Kinematic threshold
+    valid = mX > (mY + mH)
+
+    # Two-body momentum of Y in X rest frame
+    pY = np.zeros_like(mX)
+    term1 = mX**2 - (mY + mH)**2
+    term2 = mX**2 - (mY - mH)**2
+    pY[valid] = np.sqrt(term1[valid] * term2[valid]) / (2.0 * mX[valid])
+
+    # Boost proxy
+    B = np.zeros_like(mX)
+    B[valid] = pY[valid] / mY[valid]
+
+    # Smooth mapping to [0,1]
+    alpha = np.clip((B - B0) / (B1 - B0), 0.0, 1.0)
+
+    return alpha
 
 def _merge_configs(default: dict, override: dict | None) -> dict:
     if override is None:
@@ -84,12 +132,12 @@ def _apply_axis_style(ax_list, apply_style, style):
 
 
 def plot_unrolled_grid_with_winner_and_ratios(
-    points,
-    sic_by_model,
-    unc_by_model=None,
-    config=None,
-    *,
-    style=None,
+        points,
+        sic_by_model,
+        unc_by_model=None,
+        config=None,
+        *,
+        style=None,
 ):
     """Plot an unrolled grid with optional winner strip and ratio panels."""
     cfg = _merge_configs({}, config or {})
@@ -129,6 +177,7 @@ def plot_unrolled_grid_with_winner_and_ratios(
         figsize=cfg["figsize"],
         sharex=True,
         gridspec_kw={"height_ratios": height_ratios, "hspace": cfg.get("hspace", 0.0)},
+        constrained_layout=False
     )
 
     if nrows == 1:
@@ -165,10 +214,10 @@ def plot_unrolled_grid_with_winner_and_ratios(
 
         unc_cfg = cfg.get("unc", {})
         if (
-            unc_cfg.get("enabled", True)
-            and unc_by_model is not None
-            and model in set(unc_cfg.get("models", []))
-            and model in unc_by_model
+                unc_cfg.get("enabled", True)
+                and unc_by_model is not None
+                and model in set(unc_cfg.get("models", []))
+                and model in unc_by_model
         ):
             sigma = np.array([unc_by_model[model].get(p, np.nan) for p in ordered], dtype=float)
             ok = np.isfinite(sigma)
@@ -282,7 +331,12 @@ def plot_unrolled_grid_with_winner_and_ratios(
 
         if rcfg.get("reference_line", True):
             ref = 1.0 if mode == "ratio" else 0.0
-            axr.axhline(ref, linewidth=0.8)
+            axr.axhline(
+                ref,
+                color=cfg["block_separator"].get("color", "0.6"),
+                linestyle=cfg["block_separator"].get("linestyle", "--"),
+                linewidth=cfg["block_separator"].get("linewidth", 0.8),
+            )
 
         ylabel = rcfg.get("ylabel", None)
         if ylabel is None:
@@ -293,6 +347,8 @@ def plot_unrolled_grid_with_winner_and_ratios(
             else:
                 ylabel = f"log / {base}"
         axr.set_ylabel(ylabel)
+        if rcfg.get("y_log", False):
+            axr.set_yscale("log")
 
         draw_block_separators(axr, block_edges, cfg["block_separator"])
 
@@ -314,5 +370,20 @@ def plot_unrolled_grid_with_winner_and_ratios(
 
     _apply_axis_style([ax_main, *ax_ratio_list], cfg.get("apply_axis_style", False), style)
 
-    plt.tight_layout(**cfg.get("tight_layout", {"pad": 0.2}))
+    plot_legend(
+        fig,
+        active_models=cfg['raw_model_series'],
+        model_colors=MODEL_COLORS,
+        legends=["models"],
+        style=style,
+        in_figure=True,
+        y_start=1.01 if xb.get("show", True) else 1.01
+    )
+
+
+    fig.subplots_adjust(
+        **cfg.get("subplot_adjust", {})
+    )
+
+    # plt.tight_layout(**cfg.get("tight_layout", {"pad": 0.2}))
     return fig, axes
