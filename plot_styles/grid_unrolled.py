@@ -25,6 +25,10 @@ DEFAULT_UNROLLED_GRID_CONFIG = {
     "tick_fontsize_top": 10,
     "tick_fontsize_bottom": 11,
     "tick_rotation_top": 90,
+    "label_fontsize": None,
+    "label_fontsize_top": None,
+    "label_fontsize_bottom": None,
+    "label_fontsize_y": None,
     "x_top": {
         "show": True,  # master switch for bottom axis handling
         "show_text": True,  # if False -> no text labels (best for many points)
@@ -47,7 +51,7 @@ DEFAULT_UNROLLED_GRID_CONFIG = {
     "legend_main": {
         "enabled": True,
         "ncols": 4,
-        "fontsize": 9,
+        "fontsize": None,
         "loc": "upper left",
     },
     # Winner strip
@@ -183,6 +187,20 @@ def plot_unrolled_grid_with_winner_and_ratios(
 ):
     """Plot an unrolled grid with optional winner strip and ratio panels."""
     cfg = _merge_configs(DEFAULT_UNROLLED_GRID_CONFIG, config or {})
+    style = cfg.get("style", style)
+    label_fontsize = cfg.get("label_fontsize", None)
+    label_fontsize_y = cfg.get("label_fontsize_y", label_fontsize)
+    label_fontsize_top = cfg.get("label_fontsize_top", label_fontsize)
+    label_fontsize_bottom = cfg.get("label_fontsize_bottom", label_fontsize)
+    if style is not None:
+        if label_fontsize is None:
+            label_fontsize = style.axis_label_size
+        if label_fontsize_y is None:
+            label_fontsize_y = style.axis_label_size
+        if label_fontsize_top is None:
+            label_fontsize_top = style.axis_label_size
+        if label_fontsize_bottom is None:
+            label_fontsize_bottom = style.axis_label_size
 
     models = cfg["models"]
     ordered, block_edges, block_centers, mx_list = build_unrolled_order(points)
@@ -258,15 +276,18 @@ def plot_unrolled_grid_with_winner_and_ratios(
 
         line_handles.append(line_handle)
 
-    ax_main.set_ylabel(cfg.get("y_main_label", "SIC"))
+    ax_main.set_ylabel(cfg.get("y_main_label", "SIC"), fontsize=label_fontsize_y)
 
     if cfg.get("legend_main", {}).get("enabled", True):
         leg_cfg = cfg["legend_main"]
         handles = [Patch(facecolor=model_colors[m], edgecolor="none", label=m) for m in models]
+        legend_fontsize = leg_cfg.get("fontsize")
+        if legend_fontsize is None and style is not None:
+            legend_fontsize = style.legend_size
         ax_main.legend(
             handles=handles,
             ncols=leg_cfg.get("ncols", 4),
-            fontsize=leg_cfg.get("fontsize", 9),
+            fontsize=legend_fontsize,
             loc=leg_cfg.get("loc", "upper left"),
             frameon=leg_cfg.get("frameon", False),
         )
@@ -279,16 +300,22 @@ def plot_unrolled_grid_with_winner_and_ratios(
 
     xb = cfg.get("x_top", {})
     if xb.get("show", True):
-        ax_top.set_xlabel(cfg.get("x_top_label", r"$m_Y$ [GeV] (per point)"))
+        ax_top.set_xlabel(
+            cfg.get("x_top_label", r"$m_Y$ [GeV] (per point)"),
+            fontsize=label_fontsize_top,
+        )
 
         if xb.get("show_ticks", True):
             if xb.get("show_text", True):
                 label_every = int(xb.get("label_every", 1))
                 full_labels = [f"{int(my)}" for (_, my) in ordered]
                 labels = [lab if (i % label_every == 0) else "" for i, lab in enumerate(full_labels)]
+                tick_fontsize_top = cfg.get("tick_fontsize_top", 11)
+                if tick_fontsize_top is None and style is not None:
+                    tick_fontsize_top = style.tick_label_size
                 ax_top.set_xticklabels(
                     labels,
-                    fontsize=cfg.get("tick_fontsize_top", 11),
+                    fontsize=tick_fontsize_top,
                     rotation=cfg.get("tick_rotation_top", 90),
                 )
             else:
@@ -364,11 +391,17 @@ def plot_unrolled_grid_with_winner_and_ratios(
         a.tick_params(labelbottom=False)
 
     axes[-1].set_xticks(block_centers)
+    tick_fontsize_bottom = cfg.get("tick_fontsize_bottom", 10)
+    if tick_fontsize_bottom is None and style is not None:
+        tick_fontsize_bottom = style.tick_label_size
     axes[-1].set_xticklabels(
         [f"{int(mx)}" for mx in mx_list],
-        fontsize=cfg.get("tick_fontsize_bottom", 10),
+        fontsize=tick_fontsize_bottom,
     )
-    axes[-1].set_xlabel(cfg.get("x_bottom_label", r"$m_X$ [GeV]"))
+    axes[-1].set_xlabel(
+        cfg.get("x_bottom_label", r"$m_X$ [GeV]"),
+        fontsize=label_fontsize_bottom,
+    )
 
     _apply_axis_style([ax_main, *ax_ratio_list], cfg.get("apply_axis_style", False), style)
 

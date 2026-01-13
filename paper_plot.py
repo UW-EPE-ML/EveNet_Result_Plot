@@ -321,6 +321,34 @@ DEFAULT_GRID_CONFIG = {
     "metric_col": "max_sic",
     "unc_col": "max_sic_unc",
     "output_subdir": "Grid",
+    "base_plot_config": {
+        "figsize": (15, 6),
+        "hspace": 0.0,
+        "height_ratios": {
+            "main": 2.2,
+            "winner": 0.35,
+            "ratio": 1.0,
+        },
+        "x_top_label": r"$m_Y$ [GeV]",
+        "x_bottom_label": r"$m_X$ [GeV]",
+        "y_main_label": "SIC",
+        "tick_fontsize_top": 10,
+        "tick_fontsize_bottom": 11,
+        "tick_rotation_top": 90,
+        "label_fontsize": None,
+        "label_fontsize_top": None,
+        "label_fontsize_bottom": None,
+        "label_fontsize_y": None,
+        "x_top": {
+            "show": True,
+            "show_text": True,
+            "show_ticks": True,
+            "label_every": 2,
+        },
+        "style": None,
+        "apply_axis_style": True,
+        "legend_main": {"fontsize": None},
+    },
     "plots": {
         "individual": {
             "output_name": "grid_sic_individual",
@@ -352,6 +380,26 @@ DEFAULT_GRID_CONFIG = {
                 },
             ],
             "plot_config": {
+                "figsize": (15, 6),
+                "hspace": 0.0,
+                "height_ratios": {
+                    "main": 2.2,
+                    "winner": 0.35,
+                    "ratio": 1.0,
+                },
+                "x_top_label": r"$m_Y$ [GeV]",
+                "x_bottom_label": r"$m_X$ [GeV]",
+                "y_main_label": "SIC",
+                "tick_fontsize_top": 10,
+                "tick_fontsize_bottom": 11,
+                "tick_rotation_top": 90,
+                "x_top": {
+                    "show": True,
+                    "show_text": True,
+                    "show_ticks": True,
+                    "label_every": 2,
+                },
+                "apply_axis_style": True,
                 "ratios": [
                     {"baseline": "XGBoost", "mode": "ratio", "ylabel": None, "reference_line": True},
                     {"baseline": "TabPFN", "mode": "ratio", "ylabel": None, "reference_line": True},
@@ -389,6 +437,26 @@ DEFAULT_GRID_CONFIG = {
                 },
             ],
             "plot_config": {
+                "figsize": (15, 6),
+                "hspace": 0.0,
+                "height_ratios": {
+                    "main": 2.2,
+                    "winner": 0.35,
+                    "ratio": 1.0,
+                },
+                "x_top_label": r"$m_Y$ [GeV]",
+                "x_bottom_label": r"$m_X$ [GeV]",
+                "y_main_label": "SIC",
+                "tick_fontsize_top": 10,
+                "tick_fontsize_bottom": 11,
+                "tick_rotation_top": 90,
+                "x_top": {
+                    "show": True,
+                    "show_text": True,
+                    "show_ticks": True,
+                    "label_every": 2,
+                },
+                "apply_axis_style": True,
                 "ratios": [
                     {"baseline": "XGBoost (param)", "mode": "ratio", "ylabel": None, "reference_line": True},
                     {"baseline": "EveNet Pretrain (param)", "mode": "ratio", "ylabel": None, "reference_line": True},
@@ -1766,7 +1834,7 @@ def plot_grid_results(
         if not points:
             continue
 
-        plot_config = dict(plot_cfg.get("plot_config", {}))
+        plot_config = _merge_configs(cfg.get("base_plot_config", {}), plot_cfg.get("plot_config", {}))
         plot_config["models"] = model_order
         if color_map:
             plot_config["color_map"] = color_map
