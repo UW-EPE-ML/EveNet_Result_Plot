@@ -228,8 +228,8 @@ def plot_unrolled_grid_with_winner_and_ratios(
         ax_main.set_yscale("log")
 
     boost_axes = [ax_main]
-    if ax_winner is not None:
-        boost_axes.append(ax_winner)
+    # if ax_winner is not None:
+    #     boost_axes.append(ax_winner)
     boost_axes.extend(ax_ratio_list)
     draw_boosted_background(
         boost_axes,
