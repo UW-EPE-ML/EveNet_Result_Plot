@@ -7,100 +7,6 @@ from matplotlib.patches import Patch
 
 from plot_styles.core.style_axis import apply_nature_axis_style
 
-DEFAULT_UNROLLED_GRID_CONFIG = {
-    "models": ["Pretrained", "Scratch", "XGBoost", "TabPFN"],
-    # Layout
-    "figsize": (15, 6),
-    "hspace": 0.0,  # set to 0.0 to concatenate panels
-    "height_ratios": {
-        "main": 2.2,
-        "winner": 0.35,
-        "ratio": 1.0,
-    },
-    # Axes labels
-    "x_top_label": r"$m_Y$ [GeV]",
-    "x_bottom_label": r"$m_X$ [GeV]",
-    "y_main_label": "SIC",
-    # Ticks
-    "tick_fontsize_top": 10,
-    "tick_fontsize_bottom": 11,
-    "tick_rotation_top": 90,
-    "label_fontsize": None,
-    "label_fontsize_top": None,
-    "label_fontsize_bottom": None,
-    "label_fontsize_y": None,
-    "x_top": {
-        "show": True,  # master switch for bottom axis handling
-        "show_text": True,  # if False -> no text labels (best for many points)
-        "show_ticks": True,  # if False -> remove ticks entirely
-        "label_every": 2,  # show every N-th mY label if show_text=True
-    },
-    # Block separators (mX boundaries)
-    "block_separator": {
-        "enabled": True,
-        "color": "0.6",
-        "linestyle": "--",
-        "linewidth": 0.8,
-    },
-    # Main lines
-    "line": {
-        "marker": "o",
-        "markersize": 2.5,
-        "linewidth": 1.2,
-    },
-    "legend_main": {
-        "enabled": True,
-        "ncols": 4,
-        "fontsize": None,
-        "loc": "upper left",
-    },
-    # Winner strip
-    "winner": {
-        "enabled": True,
-        "ylabel": "Win",
-        "ylabel_rotation": 90,
-        "ylabel_pad": 38,
-        "legend": {
-            "enabled": True,
-            "fontsize": 8,
-            "ncols": 4,
-            "bbox_to_anchor": (1.01, 0.5),
-            "loc": "center left",
-            "frameon": False,
-        },
-    },
-    # Ratio panels (parameterized!)
-    "ratios": [
-        {
-            "baseline": "XGBoost",
-            "mode": "ratio",  # "ratio" | "diff" | "logratio"
-            "ylabel": None,  # if None, auto-label based on mode & baseline
-            "reference_line": True,
-        },
-        {
-            "baseline": "TabPFN",
-            "mode": "ratio",
-            "ylabel": None,
-            "reference_line": True,
-        },
-    ],
-    "ratio_line": {
-        "marker": "o",
-        "markersize": 2.0,
-        "linewidth": 1.0,
-    },
-    "unc": {
-        "enabled": True,
-        "models": ["Pretrained", "XGBoost"],  # empty list -> none shaded
-        "alpha": 0.25,
-        "zorder": 1,
-    },
-    "apply_axis_style": False,
-    # Tight layout padding
-    "tight_layout": {"pad": 0.2},
-}
-
-
 def _merge_configs(default: dict, override: dict | None) -> dict:
     if override is None:
         return default
@@ -186,7 +92,7 @@ def plot_unrolled_grid_with_winner_and_ratios(
     style=None,
 ):
     """Plot an unrolled grid with optional winner strip and ratio panels."""
-    cfg = _merge_configs(DEFAULT_UNROLLED_GRID_CONFIG, config or {})
+    cfg = _merge_configs({}, config or {})
     style = cfg.get("style", style)
     label_fontsize = cfg.get("label_fontsize", None)
     label_fontsize_y = cfg.get("label_fontsize_y", label_fontsize)
@@ -235,6 +141,9 @@ def plot_unrolled_grid_with_winner_and_ratios(
     ax_main = axes[0]
     ax_winner = axes[1] if winner_enabled else None
     ax_ratio_list = axes[(2 if winner_enabled else 1):]
+
+    if cfg.get("y_main_log", False):
+        ax_main.set_yscale("log")
 
     line_cfg = cfg["line"]
     color_map = cfg.get("color_map") or line_cfg.get("colors") or {}
