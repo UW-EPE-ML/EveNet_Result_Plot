@@ -2073,6 +2073,24 @@ def read_grid_data(file_path):
     grid_df = pd.DataFrame(rows)
     selected_grid_df = grid_df[grid_df['type'].isin(['individual', 'param'])]
 
+    # reading cutflows
+    cutflows = json.load(open(method_dir/"cutflow.json"))
+    rows = []
+
+    for sample, counts in cutflows.items():
+        m = pattern.match(sample)
+        if not m:
+            continue  # skip backgrounds
+
+        rows.append({
+            "m_X": float(m.group("mx")),
+            "m_Y": float(m.group("my")),
+            "passed": counts["passed"],
+            "total": counts["total"],
+        })
+
+    cutflow_df = pd.DataFrame(rows).sort_values(["m_X", "m_Y"]).reset_index(drop=True)
+
     return selected_grid_df
 
 
