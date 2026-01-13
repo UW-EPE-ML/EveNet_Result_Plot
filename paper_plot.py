@@ -383,6 +383,7 @@ DEFAULT_GRID_CONFIG = {
             "bar_width": 0.9,
             "zorder": 1,
             "log": False,
+            "round_digits": 6,
         },
         "ratios": [],
         "ratio_line": {

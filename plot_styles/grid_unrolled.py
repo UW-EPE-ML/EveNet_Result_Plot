@@ -303,14 +303,25 @@ def plot_unrolled_grid_with_winner_and_ratios(
     draw_block_separators(ax_main, block_edges, cfg["block_separator"])
 
     if cutflow_enabled:
+        round_digits = int(cutflow_cfg.get("round_digits", 6))
         passed_lookup = {
-            (row["m_X"], row["m_Y"]): row["passed"]
+            (round(float(row["m_X"]), round_digits), round(float(row["m_Y"]), round_digits)): row["passed"]
             for _, row in cutflow_df.iterrows()
         }
-        passed_vals = np.array([passed_lookup.get(p, np.nan) for p in ordered], dtype=float)
+        passed_vals = np.array(
+            [
+                passed_lookup.get(
+                    (round(float(mx), round_digits), round(float(my), round_digits)),
+                    np.nan,
+                )
+                for mx, my in ordered
+            ],
+            dtype=float,
+        )
         ok = np.isfinite(passed_vals)
         ax_cutflow.patch.set_visible(False)
-        ax_cutflow.set_zorder(ax_main.get_zorder() - 1)
+        ax_main.patch.set_alpha(0)
+        ax_cutflow.set_zorder(ax_main.get_zorder() + 1)
         ax_cutflow.bar(
             x[ok],
             passed_vals[ok],
@@ -328,6 +339,13 @@ def plot_unrolled_grid_with_winner_and_ratios(
         ax_cutflow.tick_params(axis="y", labelsize=tick_fontsize_cutflow)
         if cutflow_cfg.get("log", False):
             ax_cutflow.set_yscale("log")
+            if np.any(ok):
+                min_val = np.nanmin(passed_vals[ok])
+                max_val = np.nanmax(passed_vals[ok])
+                if min_val > 0:
+                    ax_cutflow.set_ylim(min_val * 0.8, max_val * 1.2)
+        elif np.any(ok):
+            ax_cutflow.set_ylim(0.0, np.nanmax(passed_vals[ok]) * 1.1)
 
     ax_top = ax_main.twiny()
     ax_top.set_xlim(ax_main.get_xlim())
