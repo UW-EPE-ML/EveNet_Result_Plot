@@ -170,6 +170,7 @@ def plot_unrolled_grid_with_winner_and_ratios(
         points,
         sic_by_model,
         unc_by_model=None,
+        aux_by_model=None,
         cutflow_df=None,
         config=None,
         *,
@@ -200,15 +201,26 @@ def plot_unrolled_grid_with_winner_and_ratios(
 
     ratios_cfg = cfg.get("ratios", [])
     winner_enabled = cfg.get("winner", {}).get("enabled", True)
+    aux_cfg = cfg.get("aux_panel", {})
+    aux_enabled = aux_cfg.get("enabled", False) and aux_by_model is not None
     cutflow_cfg = cfg.get("cutflow", {})
     cutflow_enabled = cutflow_cfg.get("enabled", False) and cutflow_df is not None
 
-    nrows = 1 + (1 if cutflow_enabled else 0) + (1 if winner_enabled else 0) + len(ratios_cfg)
+    nrows = (
+        1
+        + (1 if aux_enabled else 0)
+        + (1 if cutflow_enabled else 0)
+        + (1 if winner_enabled else 0)
+        + len(ratios_cfg)
+    )
     hr_main = cfg["height_ratios"]["main"]
+    hr_aux = cfg["height_ratios"].get("aux", 1.0)
     hr_cutflow = cfg["height_ratios"].get("cutflow", 0.5)
     hr_winner = cfg["height_ratios"]["winner"]
     hr_ratio = cfg["height_ratios"]["ratio"]
     height_ratios = [hr_main]
+    if aux_enabled:
+        height_ratios.append(hr_aux)
     if cutflow_enabled:
         height_ratios.append(hr_cutflow)
     if winner_enabled:
@@ -231,23 +243,29 @@ def plot_unrolled_grid_with_winner_and_ratios(
     for ax in axes:
         ax.set_xlim(-0.5, n_points - 0.5)
 
-    ax_main = axes[0]
-    ax_cutflow = axes[1] if cutflow_enabled else None
-    if winner_enabled:
-        ax_winner = axes[2] if cutflow_enabled else axes[1]
-    else:
-        ax_winner = None
-    ratio_start = 1
+    axis_index = 0
+    ax_main = axes[axis_index]
+    axis_index += 1
+    ax_aux = None
+    if aux_enabled:
+        ax_aux = axes[axis_index]
+        axis_index += 1
+    ax_cutflow = None
     if cutflow_enabled:
-        ratio_start += 1
+        ax_cutflow = axes[axis_index]
+        axis_index += 1
+    ax_winner = None
     if winner_enabled:
-        ratio_start += 1
-    ax_ratio_list = axes[ratio_start:]
+        ax_winner = axes[axis_index]
+        axis_index += 1
+    ax_ratio_list = axes[axis_index:]
 
     if cfg.get("y_main_log", False):
         ax_main.set_yscale("log")
 
     boost_axes = [ax_main]
+    if ax_aux is not None:
+        boost_axes.append(ax_aux)
     # if ax_winner is not None:
     #     boost_axes.append(ax_winner)
     if ax_cutflow is not None:
@@ -316,6 +334,37 @@ def plot_unrolled_grid_with_winner_and_ratios(
         )
 
     draw_block_separators(ax_main, block_edges, cfg["block_separator"])
+
+    if aux_enabled:
+        aux_vals = series_from_dict(aux_by_model, models, ordered)
+        aux_line_cfg = dict(line_cfg)
+        aux_line_cfg.update(aux_cfg.get("line", {}))
+        metric_col = aux_cfg.get("metric_col", "effective_steps")
+        ylabel = aux_cfg.get("ylabel")
+        if ylabel is None:
+            if metric_col == "effective_steps":
+                ylabel = "Effective steps"
+            elif metric_col == "min_val_loss":
+                ylabel = "Min val loss"
+            else:
+                ylabel = metric_col.replace("_", " ")
+        for model in models:
+            values = np.array(aux_vals[model], dtype=float)
+            values[~np.isfinite(values)] = np.nan
+            values[values <= 0.0] = np.nan
+            ax_aux.plot(
+                x,
+                values,
+                marker=aux_line_cfg.get("marker", "o"),
+                markersize=aux_line_cfg.get("markersize", 2.5),
+                linewidth=aux_line_cfg.get("linewidth", 1.2),
+                color=model_colors[model],
+            )
+
+        ax_aux.set_ylabel(ylabel, fontsize=label_fontsize_y)
+        if aux_cfg.get("y_log", False):
+            ax_aux.set_yscale("log")
+        draw_block_separators(ax_aux, block_edges, cfg["block_separator"])
 
     if cutflow_enabled:
         passed_lookup = {
@@ -457,6 +506,8 @@ def plot_unrolled_grid_with_winner_and_ratios(
     )
 
     axis_list = [ax_main, *ax_ratio_list]
+    if ax_aux is not None:
+        axis_list.append(ax_aux)
     if ax_cutflow is not None:
         axis_list.append(ax_cutflow)
     _apply_axis_style(axis_list, cfg.get("apply_axis_style", False), style)

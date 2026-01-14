@@ -331,6 +331,7 @@ DEFAULT_GRID_CONFIG = {
         "hspace": 0,
         "height_ratios": {
             "main": 2.0,
+            "aux": 1.0,
             "cutflow": 0.8,
             "winner": 0.5,
             "ratio": 1.0,
@@ -387,6 +388,12 @@ DEFAULT_GRID_CONFIG = {
             "bar_width": 1.0,
             "zorder": 1,
             "log": False,
+        },
+        "aux_panel": {
+            "enabled": True,
+            "metric_col": "effective_steps",
+            "ylabel": "Effective steps",
+            "y_log": False,
         },
         "ratios": [],
         "ratio_line": {
@@ -1842,6 +1849,30 @@ def _collect_grid_series(
     return points, sic_by_model, unc_by_model, model_order, color_map
 
 
+def _collect_grid_metric_map(
+        grid_data: pd.DataFrame,
+        *,
+        series_specs: list[dict],
+        metric_col: str,
+        points: list[tuple[float, float]],
+):
+    metric_by_model = {}
+    for spec in series_specs:
+        label = spec.get("label", spec["model"])
+        df_model = grid_data[grid_data["model"].eq(spec["model"])]
+        if spec.get("type") is not None:
+            df_model = df_model[df_model["type"].eq(spec["type"])]
+
+        if metric_col in df_model.columns:
+            grouped_metric = df_model.groupby(["m_X", "m_Y"])[metric_col].mean()
+        else:
+            grouped_metric = pd.Series(dtype=float)
+        metric_map = {key: value for key, value in grouped_metric.items()}
+        metric_by_model[label] = {point: metric_map.get(point, np.nan) for point in points}
+
+    return metric_by_model
+
+
 def plot_grid_results(
         grid_data: pd.DataFrame,
         cutflow_df: pd.DataFrame | None = None,
@@ -1880,11 +1911,22 @@ def plot_grid_results(
         plot_config["unc"] = unc_cfg
         plot_config['raw_model_series'] = [f"{m['model']}_{m['type']}" for m in plot_cfg.get("series", [])]
 
+        aux_cfg = plot_config.get("aux_panel", {})
+        aux_by_model = None
+        if aux_cfg.get("enabled", False):
+            aux_by_model = _collect_grid_metric_map(
+                grid_data,
+                series_specs=plot_cfg.get("series", []),
+                metric_col=aux_cfg.get("metric_col", "effective_steps"),
+                points=points,
+            )
+
         with use_style(style):
             fig, axes = plot_unrolled_grid_with_winner_and_ratios(
                 points,
                 sic_by_model,
                 unc_by_model=unc_by_model,
+                aux_by_model=aux_by_model,
                 cutflow_df=cutflow_df,
                 config=plot_config,
                 style=style,
