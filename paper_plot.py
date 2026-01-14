@@ -401,7 +401,7 @@ DEFAULT_GRID_CONFIG = {
             "zorder": 1,
         },
         "boost": {
-            "enabled": True,
+            "enabled": False,
             "B0": 1.5,
             "B1": 3.0,
             "mH": 125.0,

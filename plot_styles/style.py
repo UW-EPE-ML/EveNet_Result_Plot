@@ -23,7 +23,7 @@ BASE_MODEL_COLORS = {
     "Scratch":  "#E3C565",   # fixed
     "Ref.":     "#9A9A9A",   # neutral grey
     "SPANet":   "#9A9A9A",   # same grey for grouping
-    "XGBoost":  "#34183E",
+    "XGBoost":  "#A9D3AD",
     "TabPFN":   "#9A9A9A",
 }
 
