@@ -31,7 +31,8 @@ MODEL_COLORS = dict(BASE_MODEL_COLORS)
 MODEL_COLORS.update({
     "evenet-scratch_individual": BASE_MODEL_COLORS["Scratch"],
     "evenet-pretrain_individual": BASE_MODEL_COLORS["Nominal"],
-    "evenet-pretrain_param": BASE_MODEL_COLORS.get("SSL", BASE_MODEL_COLORS["Nominal"]),
+    "evenet-SSL_individual": BASE_MODEL_COLORS["SSL"],
+    "evenet-pretrain_param": "#7E65EA",
     "evenet-scratch_param": BASE_MODEL_COLORS.get("Scratch", BASE_MODEL_COLORS["Nominal"]),
     "xgb_individual": BASE_MODEL_COLORS["XGBoost"],
     "xgb_param": BASE_MODEL_COLORS["XGBoost"],
@@ -49,6 +50,7 @@ MODEL_PRETTY = {
     "TabPFN": "TabPFN",
     "evenet-full": "Nominal",
     "evenet-scratch_individual": "Scratch",
+    "evenet-SSL_individual": "SSL",
     "evenet-pretrain_individual": "Full",
     "evenet-pretrain_param": "Full (param)",
     "evenet-scratch_param": "Scratch (param)",

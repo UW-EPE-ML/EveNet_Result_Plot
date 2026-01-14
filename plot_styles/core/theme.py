@@ -41,6 +41,7 @@ class PlotStyle:
     legend_loc: str | None = None
     cms_label_fontsize: float | None = None
     cms_label_y_start: float | None = None
+    cms_label_x_start: float | None = None
     unified_y_pad: float | None = None
 
     def _resolved_sizes(self) -> dict:

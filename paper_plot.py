@@ -435,6 +435,12 @@ DEFAULT_GRID_CONFIG = {
                     "color": MODEL_COLORS["evenet-pretrain_individual"],
                 },
                 {
+                    "model": "evenet-SSL",
+                    "type": "individual",
+                    "label": "SSL",
+                    "color": MODEL_COLORS["evenet-SSL_individual"],
+                },
+                {
                     "model": "evenet-scratch",
                     "type": "individual",
                     "label": "Scratch",
@@ -456,14 +462,14 @@ DEFAULT_GRID_CONFIG = {
             "plot_config": {
                 "figsize": (15, 8),
                 "height_ratios": {
-                    "main": 2.2,
+                    "main": 2.5,
                     "aux": 1.0,
                     "cutflow": 0.8,
-                    "winner": 0.5,
+                    "winner": 0.2,
                     "ratio": 1.0,
                 },
                 "subplot_adjust": {
-                    "top": 0.865, "bottom": 0.08,
+                    "top": 0.85, "bottom": 0.08,
                     "left": 0.1, "right": 0.98,
                 },
                 "aux_panel": {
@@ -471,6 +477,11 @@ DEFAULT_GRID_CONFIG = {
                     "ylabel": "Effective \n Steps [K]",
                 },
                 "apply_axis_style": True,
+                "style": PlotStyle(
+                    base_font_size=16.0, tick_label_size=15.0,
+                    cms_label_x_start=0.1,
+                    cms_label_y_start=0.99,
+                ),
                 "ratios": [
                     # {"baseline": "XGBoost", "mode": "ratio", "ylabel": "/XGB", "reference_line": True},
                     # {"baseline": "TabPFN v2.5", "mode": "ratio", "ylabel": "/TabPFN", "reference_line": True},
@@ -510,7 +521,19 @@ DEFAULT_GRID_CONFIG = {
             ],
             "plot_config": {
                 "figsize": (15, 6),
+                "style": PlotStyle(
+                    base_font_size=16.0, tick_label_size=15.0,
+                    cms_label_x_start=0.09,
+                    cms_label_y_start=0.99,
+                ),
                 "hspace": 0.05,
+                "height_ratios": {
+                    "main": 2.2,
+                    "aux": 1.0,
+                    "cutflow": 0.8,
+                    "winner": 0.19,
+                    "ratio": 1.0,
+                },
                 "ratios": [
                     # {"baseline": "XGBoost (param)", "mode": "ratio", "ylabel": "/XGB", "reference_line": True, "y_log": True},
                     # {"baseline": "EveNet-Scratch (param)", "mode": "ratio", "ylabel": "/Scratch", "reference_line": True, "y_log": True},
@@ -525,7 +548,7 @@ DEFAULT_GRID_CONFIG = {
                     "enabled": False,
                 },
                 "subplot_adjust": {
-                    "top": 0.81, "bottom": 0.10,
+                    "top": 0.79, "bottom": 0.10,
                     "left": 0.09, "right": 0.98,
                 },
             },
@@ -2132,6 +2155,7 @@ def read_grid_data(file_path):
         ("evenet-pretrain", "param"): (2048, 2),
         ("evenet-scratch", "individual"): (2048, 1),
         ("evenet-scratch", "param"): (2048, 2),
+        ("evenet-SSL", "individual"): (4096, 1),
     }
 
     with open(method_dir / "all_checkpoints.txt") as f:
@@ -2139,7 +2163,7 @@ def read_grid_data(file_path):
 
     pattern_ckpt = re.compile(
         r"""
-        ^(?P<model>evenet-(?:pretrain|scratch))/
+        ^(?P<model>evenet-(?:pretrain|scratch|SSL))/
         (?P<training>(?:individual|parametrized_reduce_factor_x_1_y_1))/
         (?:
             MX-(?P<mX>[\d.]+)_MY-(?P<mY>[\d.]+)/

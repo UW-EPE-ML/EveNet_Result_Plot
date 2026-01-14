@@ -48,7 +48,12 @@ def plot_legend(
     cms_label_fontsize = (
         style.cms_label_fontsize
         if style is not None and style.cms_label_fontsize is not None
-        else 1.5 * legend_fontsize
+        else 1.3 * legend_fontsize
+    )
+    cms_label_x_start = (
+        style.cms_label_x_start
+        if style is not None and style.cms_label_x_start is not None
+        else 0.05
     )
     cms_label_y_start = (
         style.cms_label_y_start
@@ -176,7 +181,7 @@ def plot_legend(
 
     if CMS_label:
         fig.text(
-            0.02,
+            cms_label_x_start,
             cms_label_y_start,
             CMS_label,
             transform=fig.transFigure,
