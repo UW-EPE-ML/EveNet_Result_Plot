@@ -2149,13 +2149,13 @@ def read_grid_data(file_path):
                 "trafo_bin_sig": metrics.get("trafo_bin_sig"),
                 "min_val_loss": ckpt_info[1],
                 "best_epoch": ckpt_info[0],
-                "statistics": 0,
+                "statistics": 0.0,
                 "effective_steps": None,
                 "effective_batch_size": effective_train_info[0] * effective_train_info[1],
             })
 
     grid_df = pd.DataFrame(rows)
-    selected_grid_df = grid_df[grid_df['type'].isin(['individual', 'param'])]
+    selected_grid_df = grid_df[grid_df['type'].isin(['individual', 'param'])].copy()
 
     # reading cutflows
     cutflows = json.load(open(method_dir / "cutflow.json"))
