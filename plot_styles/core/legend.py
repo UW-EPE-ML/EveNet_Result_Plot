@@ -21,6 +21,7 @@ def plot_legend(
         dataset_markers: Optional[dict] = None,
         dataset_pretty: Optional[dict] = None,
         model_colors: Optional[dict] = None,
+        param_entries: Optional[Sequence[dict]] = None,
         head_order: Optional[Sequence[str]] = None,
         head_linestyles: Optional[dict] = None,
         legends: Optional[List[str]] = None,
@@ -62,6 +63,7 @@ def plot_legend(
         bool("dataset" in legends and dataset_markers is not None and dataset_pretty is not None),
         bool("heads" in legends and head_order is not None and head_linestyles is not None),
         bool("models" in legends and active_models is not None and model_colors is not None),
+        bool("param" in legends and param_entries is not None),
     ])
 
     if in_figure:
@@ -162,6 +164,28 @@ def plot_legend(
         handles = [Line2D([], [], linestyle="none", label="Dataset Size")] + ds_handles
         labels = ["Dataset Size"] + [dataset_pretty[str(ds)] for ds in train_sizes]
         add_legend(handles, labels, ncol=len(ds_handles) + 1)
+
+    if "param" in legends and param_entries is not None:
+        param_handles = []
+        param_labels = []
+        for entry in param_entries:
+            param_handles.append(
+                Line2D(
+                    [0],
+                    [0],
+                    marker=entry.get("marker", "o"),
+                    markersize=14 * marker_scale,
+                    linestyle="",
+                    color=entry.get("color", "black"),
+                    markeredgecolor=entry.get("edgecolor", "black"),
+                    markerfacecolor=entry.get("facecolor", entry.get("color", "black")),
+                    alpha=entry.get("alpha", 1.0),
+                )
+            )
+            param_labels.append(entry.get("label", "Param"))
+        handles = [Line2D([], [], linestyle="none", label="Param Steps")] + param_handles
+        labels = ["Param Steps"] + param_labels
+        add_legend(handles, labels, ncol=len(param_handles) + 1)
 
     if "calibration" in legends:
         calibrated_handle = Rectangle((0, 0), 1, 1, facecolor="white", edgecolor="black")

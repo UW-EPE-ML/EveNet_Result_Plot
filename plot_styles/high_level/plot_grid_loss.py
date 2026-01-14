@@ -10,8 +10,7 @@ from typing import Optional, Sequence
 
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.lines import Line2D
-
+from plot_styles.core.legend import plot_legend
 from plot_styles.core.style_axis import style_axis_basic
 from plot_styles.core.theme import PlotStyle, scaled_fig_size, use_style
 from plot_styles.style import MODEL_COLORS
@@ -64,9 +63,9 @@ def plot_grid_loss(
         model_specs: Sequence[dict],
         loss_col: str = "min_val_loss",
         raw_step_col: str = "effective_steps_raw",
-        per_signal_step_col: str = "effective_steps",
+        per_signal_step_col: str = "effective_steps_per_signal",
         x_label: str = "Effective steps [K]",
-        y_label: str = "Min val loss",
+        y_label: str = "min val loss",
         xscale: Optional[str] = "log",
         yscale: Optional[str] = None,
         y_min: Optional[float] = None,
@@ -92,19 +91,16 @@ def plot_grid_loss(
         resolved_size = scaled_fig_size(fig_size, scale=fig_scale, aspect_ratio=fig_aspect)
         fig, ax = plt.subplots(figsize=resolved_size)
 
-    model_handles = []
-    marker_handles = []
+    active_models = []
+    model_colors = {}
+    param_legend_entries = []
 
     for spec in model_specs:
         model_name = spec["model"]
         run_type = spec.get("type")
         label = spec.get("label", model_name)
         color = spec.get("color", MODEL_COLORS.get(f"{model_name}_{run_type}", "black"))
-        legend_marker = spec.get(
-            "legend_marker",
-            individual_style.get("marker", "o") if run_type == "individual" else param_points.get("raw", {}).get(
-                "marker", "*"),
-        )
+        model_key = spec.get("model_key", f"{model_name}_{run_type}" if run_type else model_name)
 
         df_model = grid_df[grid_df["model"].eq(model_name)]
         if run_type is not None:
@@ -175,55 +171,41 @@ def plot_grid_loss(
                     s=cfg.get("size", 220),
                     marker=cfg.get("marker", "*"),
                     color=color if cfg.get("filled", True) else "none",
-                    edgecolors=param_style.get("edgecolor", color),
+                    edgecolors=cfg.get("edgecolor", param_style.get("edgecolor", color)),
                     linewidths=param_style.get("linewidth", 1.2),
-                    alpha=param_style.get("alpha", 0.9),
+                    alpha=cfg.get("alpha", param_style.get("alpha", 0.9)),
                     zorder=param_style.get("zorder", 3),
                 )
 
-        model_handles.append(
-            Line2D(
-                [0],
-                [0],
-                marker=legend_marker,
-                linestyle="None",
-                markerfacecolor=color,
-                markeredgecolor="black",
-                markersize=8,
-                label=label,
-            )
-        )
+        if model_key not in active_models:
+            active_models.append(model_key)
+            model_colors[model_key] = color
 
-    if legend_config.get("enabled", True) and model_handles:
-        model_legend = ax.legend(
-            handles=model_handles,
-            title=legend_config.get("model_title", "Model"),
-            loc=legend_config.get("model_loc", "upper right"),
-            frameon=False,
-        )
-        ax.add_artist(model_legend)
+    if legend_config.get("enabled", True) and active_models:
+        param_legend_entries = []
+        for _, cfg in (param_points or {}).items():
+            param_legend_entries.append(
+                {
+                    "marker": cfg.get("marker", "*"),
+                    "label": cfg.get("label", "Param"),
+                    "color": cfg.get("legend_color", "black"),
+                    "edgecolor": cfg.get("edgecolor", "black"),
+                    "facecolor": cfg.get("legend_facecolor", cfg.get("legend_color", "black")),
+                    "alpha": cfg.get("legend_alpha", cfg.get("alpha", 1.0)),
+                }
+            )
 
-        marker_handles = []
-        for key, cfg in (param_points or {}).items():
-            marker_handles.append(
-                Line2D(
-                    [0],
-                    [0],
-                    marker=cfg.get("marker", "*"),
-                    linestyle="None",
-                    markerfacecolor="black" if cfg.get("filled", True) else "none",
-                    markeredgecolor="black",
-                    markersize=9,
-                    label=cfg.get("label", key),
-                )
-            )
-        if marker_handles:
-            ax.legend(
-                handles=marker_handles,
-                title=legend_config.get("marker_title", "Param steps"),
-                loc=legend_config.get("marker_loc", "lower left"),
-                frameon=False,
-            )
+        plot_legend(
+            fig,
+            active_models=active_models,
+            model_colors=model_colors,
+            legends=legend_config.get("sections", ["models", "param"]),
+            param_entries=param_legend_entries,
+            style=style,
+            in_figure=True,
+            y_start=legend_config.get("y_start", 1.02),
+            y_gap=legend_config.get("y_gap", 0.08),
+        )
 
     style_axis_basic(
         ax,
