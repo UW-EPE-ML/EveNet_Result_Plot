@@ -11,6 +11,7 @@ from matplotlib.colors import LinearSegmentedColormap
 from functools import reduce
 
 from plot_styles.high_level.plot_loss import plot_loss
+from plot_styles.high_level.plot_grid_loss import plot_grid_loss
 from plot_styles.high_level.plot_bar_line import plot_metric_scatter, plot_metric_bar
 from plot_styles.high_level.plot_systematics import plot_systematic_scatter
 from plot_styles.sic import sic_plot_individual
@@ -530,6 +531,79 @@ DEFAULT_GRID_CONFIG = {
                 },
             },
         },
+    },
+    "loss": {
+        "enabled": True,
+        "output_name": "grid_loss",
+        "title": "Grid loss (EveNet)",
+        "loss_col": "min_val_loss",
+        "raw_step_col": "effective_steps_raw",
+        "per_signal_step_col": "effective_steps",
+        "x_label": "Effective steps [K]",
+        "y_label": "Min val loss",
+        "xscale": "log",
+        "fig_size": (6, 6),
+        "grid": False,
+        "models": [
+            {
+                "model": "evenet-pretrain",
+                "type": "individual",
+                "label": "Full (individual)",
+                "color": MODEL_COLORS["evenet-pretrain_individual"],
+            },
+            {
+                "model": "evenet-pretrain",
+                "type": "param",
+                "label": "Full (param)",
+                "color": MODEL_COLORS["evenet-pretrain_param"],
+            },
+            {
+                "model": "evenet-scratch",
+                "type": "individual",
+                "label": "Scratch (individual)",
+                "color": MODEL_COLORS["evenet-scratch_individual"],
+            },
+            {
+                "model": "evenet-scratch",
+                "type": "param",
+                "label": "Scratch (param)",
+                "color": MODEL_COLORS["evenet-scratch_param"],
+            },
+        ],
+        "individual": {
+            "marker": "o",
+            "size": 40,
+            "alpha": 0.55,
+            "edgecolor": "none",
+        },
+        "param_points": {
+            "raw": {"marker": "*", "size": 220, "label": "Param (total steps)", "filled": True},
+            "per_signal": {"marker": "*", "size": 220, "label": "Param / #signals", "filled": False},
+        },
+        "param": {
+            "edgecolor": "black",
+            "linewidth": 0.9,
+            "alpha": 0.9,
+            "zorder": 3,
+        },
+        "density": {
+            "enabled": False,
+            "bins": 24,
+            "levels": 6,
+            "alpha": 0.25,
+            "linewidths": 1.0,
+            "filled": False,
+            "use_log_x": True,
+            "use_log_y": False,
+        },
+        "legend": {
+            "enabled": True,
+            "model_title": "Model",
+            "marker_title": "Param steps",
+            "model_loc": "upper right",
+            "marker_loc": "lower left",
+        },
+        "style": DEFAULT_STYLE,
     },
 }
 
@@ -1969,6 +2043,47 @@ def plot_grid_results(
             "title": plot_cfg.get("title", name),
         }
 
+    loss_cfg = cfg.get("loss")
+    if loss_cfg and loss_cfg.get("enabled", True):
+        loss_style = _resolve_style(style, loss_cfg.get("style"))
+        loss_scale = loss_cfg.get(
+            "fig_scale",
+            loss_style.figure_scale if loss_style and loss_style.figure_scale else 1.0,
+        )
+        fig, ax = plot_grid_loss(
+            grid_data,
+            model_specs=loss_cfg.get("models", []),
+            loss_col=loss_cfg.get("loss_col", "min_val_loss"),
+            raw_step_col=loss_cfg.get("raw_step_col", "effective_steps_raw"),
+            per_signal_step_col=loss_cfg.get("per_signal_step_col", "effective_steps"),
+            x_label=loss_cfg.get("x_label", "Effective steps [K]"),
+            y_label=loss_cfg.get("y_label", "Min val loss"),
+            xscale=loss_cfg.get("xscale", "log"),
+            yscale=loss_cfg.get("yscale"),
+            y_min=loss_cfg.get("y_min"),
+            y_max=loss_cfg.get("y_max"),
+            fig_size=loss_cfg.get("fig_size", (6, 6)),
+            fig_scale=loss_scale,
+            fig_aspect=loss_cfg.get("fig_aspect"),
+            grid=loss_cfg.get("grid", False),
+            individual_style=loss_cfg.get("individual"),
+            param_points=loss_cfg.get("param_points"),
+            param_style=loss_cfg.get("param"),
+            density=loss_cfg.get("density"),
+            legend_config=loss_cfg.get("legend"),
+            style=loss_style,
+        )
+
+        output_name = loss_cfg.get("output_name", "grid_loss")
+        output_path = os.path.join(plot_dir, _with_ext(output_name, file_format))
+        fig.savefig(output_path, **_save_kwargs(file_format, dpi))
+        outputs["loss"] = {
+            "fig": fig,
+            "axes": [ax],
+            "path": output_path,
+            "title": loss_cfg.get("title", "Grid loss"),
+        }
+
     return outputs
 
 
@@ -1996,11 +2111,18 @@ def plot_grid_results_webpage(
     merged_cfg = _merge_configs(DEFAULT_GRID_CONFIG, config)
     plot_dir = output_dir / merged_cfg.get("output_subdir", "Grid")
 
-    return {
+    outputs = {
         name: os.path.join(str(plot_dir), _with_ext(cfg.get("output_name", f"grid_{name}"), file_format))
         for name, cfg in merged_cfg.get("plots", {}).items()
         if name in results
     }
+    loss_cfg = merged_cfg.get("loss", {})
+    if loss_cfg and loss_cfg.get("enabled", True) and "loss" in results:
+        outputs["loss"] = os.path.join(
+            str(plot_dir),
+            _with_ext(loss_cfg.get("output_name", "grid_loss"), file_format),
+        )
+    return outputs
 
 
 def plot_final_paper_figures(
@@ -2270,7 +2392,10 @@ def read_grid_data(file_path):
         batch_size_per_GPU=selected_grid_df["effective_batch_size"],
         GPUs=1,
     ) / 1000
+    selected_grid_df["effective_steps_raw"] = selected_grid_df["effective_steps"]
+    selected_grid_df["effective_steps_per_signal"] = selected_grid_df["effective_steps"]
     selected_grid_df.loc[mask_par, "effective_steps"] /= len(cutflow_df)
+    selected_grid_df.loc[mask_par, "effective_steps_per_signal"] /= len(cutflow_df)
 
     return selected_grid_df, cutflow_df
 
