@@ -11,3 +11,8 @@ rsync -Pavz \
 
 
 rsync -Pavz "nersc:/pscratch/sd/t/tihsu/database/Grid_Study_CMS_OpenData_bbWW_HWW/data/cutflow.json" "$script_dir/method_arxiv"
+
+ssh nersc \
+"find /pscratch/sd/t/tihsu/database/Grid_Study_CMS_OpenData_bbWW_HWW/method_arxiv \
+  -path '*/checkpoints/checkpoints-*' -printf '%P\n'" \
+> "$script_dir/method_arxiv/all_checkpoints.txt"

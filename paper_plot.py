@@ -490,7 +490,8 @@ DEFAULT_GRID_CONFIG = {
                 "ratios": [
                     # {"baseline": "XGBoost (param)", "mode": "ratio", "ylabel": "/XGB", "reference_line": True, "y_log": True},
                     # {"baseline": "EveNet-Scratch (param)", "mode": "ratio", "ylabel": "/Scratch", "reference_line": True, "y_log": True},
-                    {"baseline": "Full", "mode": "ratio", "ylabel": "Ratio to Full", "reference_line": True, "y_log": False},
+                    {"baseline": "Full", "mode": "ratio", "ylabel": "Ratio to Full", "reference_line": True,
+                     "y_log": False},
                 ],
                 "unc": {"enabled": True},
             },
@@ -603,7 +604,7 @@ def plot_task_legend(
     return legend_path
 
 
-def convert_epochs_to_steps(epoch, train_size, batch_size_per_GPU=1024, GPUs=16):
+def convert_epochs_to_steps(epoch, train_size, batch_size_per_GPU, GPUs):
     effective_step = (epoch * train_size * 1000 / (batch_size_per_GPU * GPUs))
     return effective_step
 
@@ -2056,6 +2057,53 @@ def read_grid_data(file_path):
     method_dir = Path(file_path)
     rows = []
 
+    train_info = {
+        # batch size, # of GPU
+        ("evenet-pretrain", "individual"): (4096, 1),
+        ("evenet-pretrain", "param"): (2048, 2),
+        ("evenet-scratch", "individual"): (2048, 1),
+        ("evenet-scratch", "param"): (2048, 2),
+    }
+
+    with open(method_dir / "all_checkpoints.txt") as f:
+        all_checkpoints = [line.strip() for line in f if line.strip()]
+
+    pattern_ckpt = re.compile(
+        r"""
+        ^(?P<model>evenet-(?:pretrain|scratch))/
+        (?P<training>(?:individual|parametrized_reduce_factor_x_1_y_1))/
+        (?:
+            MX-(?P<mX>[\d.]+)_MY-(?P<mY>[\d.]+)/
+            |
+            All/
+        )
+        checkpoints/
+        checkpoints-val_loss-epoch(?P<epoch>\d+)-(?P<loss>[\d.]+)\.pt$
+        """,
+        re.VERBOSE,
+    )
+
+    ckpt_result = {}
+
+    for s in all_checkpoints:
+        m = pattern_ckpt.match(s)
+        if not m:
+            continue
+
+        model_name = m.group("model")
+        train_type = m.group("training")
+        train_type = "param" if train_type == "parametrized_reduce_factor_x_1_y_1" else train_type
+
+        # Handle parametrized "All" case
+        mX = float(m.group("mX")) if m.group("mX") else None
+        mY = float(m.group("mY")) if m.group("mY") else None
+
+        epoch = int(m.group("epoch"))
+        val_loss = float(m.group("loss"))
+
+        key = (model_name, train_type, mX, mY)
+        ckpt_result[key] = (epoch, val_loss)
+
     # Regex for MX / MY in filename
     pattern = re.compile(r"MX-(?P<mx>[\d.]+)_MY-(?P<my>[\d.]+)")
 
@@ -2077,10 +2125,14 @@ def read_grid_data(file_path):
             parts = json_file.parts
             if "individual" in parts:
                 run_type = "individual"
+                ckpt_info = ckpt_result.get((model_name, run_type, m_X, m_Y), (None, None))
             elif any(p.startswith("parametrized_reduce_factor_x_1_y_1") for p in parts):
                 run_type = "param"
+                ckpt_info = ckpt_result.get((model_name, run_type, None, None), (None, None))
             else:
                 run_type = "unknown"
+                ckpt_info = (None, None)
+            effective_train_info = train_info.get((model_name, run_type), (0, 0))
 
             # Read JSON
             with open(json_file) as f:
@@ -2095,19 +2147,29 @@ def read_grid_data(file_path):
                 "max_sic": metrics.get("max_sic"),
                 "max_sic_unc": metrics.get("max_sic_unc"),
                 "trafo_bin_sig": metrics.get("trafo_bin_sig"),
+                "min_val_loss": ckpt_info[1],
+                "best_epoch": ckpt_info[0],
+                "statistics": 0,
+                "effective_steps": None,
+                "effective_batch_size": effective_train_info[0] * effective_train_info[1],
             })
 
     grid_df = pd.DataFrame(rows)
     selected_grid_df = grid_df[grid_df['type'].isin(['individual', 'param'])]
 
     # reading cutflows
-    cutflows = json.load(open(method_dir/"cutflow.json"))
+    cutflows = json.load(open(method_dir / "cutflow.json"))
     rows = []
-
+    bkgs = []
     for sample, counts in cutflows.items():
         m = pattern.match(sample)
         if not m:
-            continue  # skip backgrounds
+            bkgs.append({
+                "sample": sample,
+                "passed": counts["passed"] / 2000 if sample != "tt1l" else 500,
+                "total": counts["total"] / 2000,
+            })
+            continue
 
         rows.append({
             "m_X": float(m.group("mx")),
@@ -2117,6 +2179,28 @@ def read_grid_data(file_path):
         })
 
     cutflow_df = pd.DataFrame(rows).sort_values(["m_X", "m_Y"]).reset_index(drop=True)
+    cutflow_bkg_df = pd.DataFrame(bkgs)
+    bkg_sum = cutflow_bkg_df['passed'].sum()
+    sig_sum = cutflow_df["passed"].sum()
+    sig_passed_map = {(r.m_X, r.m_Y): r.passed for r in cutflow_df.itertuples(index=False)}
+
+    # individual: per-point signal + global bkg
+    mask_ind = selected_grid_df["type"].eq("individual")
+    selected_grid_df.loc[mask_ind, "statistics"] = [
+        sig_passed_map.get((mx, my), np.nan) + bkg_sum
+        for mx, my in zip(selected_grid_df.loc[mask_ind, "m_X"], selected_grid_df.loc[mask_ind, "m_Y"])
+    ]
+
+    # param: global (all signals) + global bkg (same for every row)
+    mask_par = selected_grid_df["type"].eq("param")
+    selected_grid_df.loc[mask_par, "statistics"] = sig_sum + bkg_sum
+
+    selected_grid_df["effective_steps"] = convert_epochs_to_steps(
+        epoch=selected_grid_df["best_epoch"],
+        train_size=selected_grid_df["statistics"],
+        batch_size_per_GPU=selected_grid_df["effective_batch_size"],
+        GPUs=1,
+    )
 
     return selected_grid_df, cutflow_df
 
