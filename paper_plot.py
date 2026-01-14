@@ -328,10 +328,10 @@ DEFAULT_GRID_CONFIG = {
     "base_plot_config": {
         "models": [],
         "figsize": (15, 7),
-        "hspace": 0,
+        "hspace": 0.05,
         "height_ratios": {
             "main": 2.0,
-            "aux": 1.0,
+            "aux": 1.2,
             "cutflow": 0.8,
             "winner": 0.5,
             "ratio": 1.0,
@@ -376,11 +376,11 @@ DEFAULT_GRID_CONFIG = {
             "enabled": True,
             "ylabel": "",
             "ylabel_rotation": 90,
-            "ylabel_pad": 37,
+            # "ylabel_pad": 37,
         },
         "cutflow": {
             "enabled": True,
-            "ylabel": "Stats. [K]",
+            "ylabel": "Signal \n Stats. [K]",
             "color": "0.7",
             "edgecolor": "0.2",
             "alpha": 0.75,
@@ -392,7 +392,7 @@ DEFAULT_GRID_CONFIG = {
         "aux_panel": {
             "enabled": True,
             "metric_col": "effective_steps",
-            "ylabel": "Effective steps",
+            "ylabel": "Updates [K]",
             "y_log": False,
         },
         "ratios": [],
@@ -420,12 +420,11 @@ DEFAULT_GRID_CONFIG = {
         # "tight_layout": {"pad": 0.2},
         "subplot_adjust": {
             "top": 0.83, "bottom": 0.08,
-            "left": 0.05, "right": 0.98,
+            "left": 0.1, "right": 0.98,
         },
     },
     "plots": {
         "individual": {
-            # "style": PlotStyle(base_font_size=10.0, tick_label_size=9.0, full_axis=True),
             "output_name": "grid_sic_individual",
             "title": "Grid SIC (individual)",
             "series": [
@@ -455,11 +454,27 @@ DEFAULT_GRID_CONFIG = {
                 },
             ],
             "plot_config": {
+                "figsize": (15, 8),
+                "height_ratios": {
+                    "main": 2.2,
+                    "aux": 1.0,
+                    "cutflow": 0.8,
+                    "winner": 0.5,
+                    "ratio": 1.0,
+                },
+                "subplot_adjust": {
+                    "top": 0.865, "bottom": 0.08,
+                    "left": 0.1, "right": 0.98,
+                },
+                "aux_panel": {
+                    "enabled": True,
+                    "ylabel": "Effective \n Steps [K]",
+                },
                 "apply_axis_style": True,
                 "ratios": [
                     # {"baseline": "XGBoost", "mode": "ratio", "ylabel": "/XGB", "reference_line": True},
                     # {"baseline": "TabPFN v2.5", "mode": "ratio", "ylabel": "/TabPFN", "reference_line": True},
-                    {"baseline": "Full", "mode": "ratio", "ylabel": "Ratio to Full", "reference_line": True},
+                    {"baseline": "Full", "mode": "ratio", "ylabel": "Ratio \n to Full", "reference_line": True},
                 ],
                 "unc": {"enabled": True},
             },
@@ -494,13 +509,25 @@ DEFAULT_GRID_CONFIG = {
                 },
             ],
             "plot_config": {
+                "figsize": (15, 6),
+                "hspace": 0.05,
                 "ratios": [
                     # {"baseline": "XGBoost (param)", "mode": "ratio", "ylabel": "/XGB", "reference_line": True, "y_log": True},
                     # {"baseline": "EveNet-Scratch (param)", "mode": "ratio", "ylabel": "/Scratch", "reference_line": True, "y_log": True},
-                    {"baseline": "Full", "mode": "ratio", "ylabel": "Ratio to Full", "reference_line": True,
+                    {"baseline": "Full", "mode": "ratio", "ylabel": "Ratio \n to Full", "reference_line": True,
                      "y_log": False},
                 ],
                 "unc": {"enabled": True},
+                "aux_panel": {
+                    "enabled": False,
+                },
+                "cutflow": {
+                    "enabled": False,
+                },
+                "subplot_adjust": {
+                    "top": 0.81, "bottom": 0.10,
+                    "left": 0.09, "right": 0.98,
+                },
             },
         },
     },
@@ -2242,7 +2269,8 @@ def read_grid_data(file_path):
         train_size=selected_grid_df["statistics"],
         batch_size_per_GPU=selected_grid_df["effective_batch_size"],
         GPUs=1,
-    )
+    ) / 1000
+    selected_grid_df.loc[mask_par, "effective_steps"] /= len(cutflow_df)
 
     return selected_grid_df, cutflow_df
 

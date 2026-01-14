@@ -7,6 +7,7 @@ from matplotlib.patches import Patch
 
 from plot_styles.core.legend import plot_legend
 from plot_styles.core.style_axis import apply_nature_axis_style
+from plot_styles.core.theme import PlotStyle
 from plot_styles.style import MODEL_COLORS
 
 
@@ -179,6 +180,11 @@ def plot_unrolled_grid_with_winner_and_ratios(
     """Plot an unrolled grid with optional winner strip and ratio panels."""
     cfg = _merge_configs({}, config or {})
     style = cfg.get("style", style)
+
+    # # hotfitx
+    # if style:
+    #     style.unified_y_pad = getattr(cfg.get('style',{}), "unified_y_pad", None)
+
     label_fontsize = cfg.get("label_fontsize", None)
     label_fontsize_y = cfg.get("label_fontsize_y", label_fontsize)
     label_fontsize_top = cfg.get("label_fontsize_top", label_fontsize)
@@ -208,9 +214,9 @@ def plot_unrolled_grid_with_winner_and_ratios(
 
     nrows = (
         1
+        + (1 if winner_enabled else 0)
         + (1 if aux_enabled else 0)
         + (1 if cutflow_enabled else 0)
-        + (1 if winner_enabled else 0)
         + len(ratios_cfg)
     )
     hr_main = cfg["height_ratios"]["main"]
@@ -219,12 +225,12 @@ def plot_unrolled_grid_with_winner_and_ratios(
     hr_winner = cfg["height_ratios"]["winner"]
     hr_ratio = cfg["height_ratios"]["ratio"]
     height_ratios = [hr_main]
+    if winner_enabled:
+        height_ratios.append(hr_winner)
     if aux_enabled:
         height_ratios.append(hr_aux)
     if cutflow_enabled:
         height_ratios.append(hr_cutflow)
-    if winner_enabled:
-        height_ratios.append(hr_winner)
     height_ratios += [hr_ratio] * len(ratios_cfg)
 
     fig, axes = plt.subplots(
@@ -246,6 +252,10 @@ def plot_unrolled_grid_with_winner_and_ratios(
     axis_index = 0
     ax_main = axes[axis_index]
     axis_index += 1
+    ax_winner = None
+    if winner_enabled:
+        ax_winner = axes[axis_index]
+        axis_index += 1
     ax_aux = None
     if aux_enabled:
         ax_aux = axes[axis_index]
@@ -253,10 +263,6 @@ def plot_unrolled_grid_with_winner_and_ratios(
     ax_cutflow = None
     if cutflow_enabled:
         ax_cutflow = axes[axis_index]
-        axis_index += 1
-    ax_winner = None
-    if winner_enabled:
-        ax_winner = axes[axis_index]
         axis_index += 1
     ax_ratio_list = axes[axis_index:]
 
@@ -361,7 +367,7 @@ def plot_unrolled_grid_with_winner_and_ratios(
                 color=model_colors[model],
             )
 
-        ax_aux.set_ylabel(ylabel, fontsize=label_fontsize_y)
+        ax_aux.set_ylabel(ylabel, fontsize=label_fontsize_y,labelpad = aux_cfg.get("ylabel_pad", 15))
         if aux_cfg.get("y_log", False):
             ax_aux.set_yscale("log")
         draw_block_separators(ax_aux, block_edges, cfg["block_separator"])
@@ -510,7 +516,21 @@ def plot_unrolled_grid_with_winner_and_ratios(
         axis_list.append(ax_aux)
     if ax_cutflow is not None:
         axis_list.append(ax_cutflow)
+    if ax_winner is not None:
+        axis_list.append(ax_winner)
     _apply_axis_style(axis_list, cfg.get("apply_axis_style", False), style)
+
+    fig.align_ylabels(axis_list)
+
+    for ax in axes[:-1]:
+        ax.tick_params(
+            axis="x",
+            which="both",
+            bottom=False,  # remove tick marks
+            top=False,
+            labelbottom=False  # remove tick labels
+        )
+        ax.set_xlabel("")  # optional: remove x-label text
 
     plot_legend(
         fig,

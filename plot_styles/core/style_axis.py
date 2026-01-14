@@ -26,6 +26,11 @@ def apply_nature_axis_style(ax, *, style: PlotStyle | None = None):
         if style is not None and style.tick_label_size is not None
         else plt.rcParams.get("xtick.labelsize", 11)
     )
+    unified_y_pad = (
+        style.unified_y_pad
+        if style is not None and style.unified_y_pad is not None
+        else None
+    )
 
     ax.tick_params(reset=True)
 
@@ -64,10 +69,12 @@ def apply_nature_axis_style(ax, *, style: PlotStyle | None = None):
         left=True,
         right=False,
     )
-
     label_pad = 4 * scale
     ax.xaxis.labelpad = label_pad
-    ax.yaxis.labelpad = label_pad
+    if unified_y_pad is None:
+        ax.yaxis.labelpad = label_pad
+    else:
+        ax.yaxis.labelpad = unified_y_pad
 
     if style is not None and style.nbins is not None:
         ax.yaxis.set_major_locator(MaxNLocator(nbins=style.nbins))
