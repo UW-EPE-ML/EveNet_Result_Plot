@@ -1033,6 +1033,12 @@ def plot_qe_results(
                 bbox_inches="tight",
                 **_save_kwargs(file_format, dpi),
             )
+            fig_syst.savefig(
+                os.path.join(plot_dir, _with_ext(f"qe_systematics_{suffix}_scatter", 'svg')),
+                format="svg",
+                bbox_inches="tight",
+                transparent=False,
+            )
             systematic_output[suffix] = {
                 "fig": fig_syst,
                 "axes": [ax_syst],
@@ -1438,6 +1444,12 @@ def plot_bsm_results(
                 os.path.join(plot_dir, _with_ext(f"systematics_{suffix}_scatter", file_format)),
                 bbox_inches="tight",
                 **_save_kwargs(file_format, dpi),
+            )
+            fig_syst.savefig(
+                os.path.join(plot_dir, _with_ext(f"bsm_systematics_{suffix}_scatter", 'svg')),
+                format="svg",
+                bbox_inches="tight",
+                transparent=False,
             )
             systematic_output[suffix] = {
                 "fig": fig_syst,
@@ -1985,6 +1997,12 @@ def plot_grid_results(
         output_name = plot_cfg.get("output_name", f"grid_{name}")
         output_path = os.path.join(plot_dir, _with_ext(output_name, file_format))
         fig.savefig(output_path, **_save_kwargs(file_format, dpi))
+        fig.savefig(
+            Path(output_path).with_suffix(".svg"),
+            format="svg",
+            bbox_inches="tight",
+            transparent=False,
+        )
         outputs[name] = {
             "fig": fig,
             "axes": axes,
