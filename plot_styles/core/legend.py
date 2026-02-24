@@ -29,11 +29,13 @@ def plot_legend(
         style: PlotStyle | None = None,
         in_figure: bool = False,
         CMS_label: str | None = None,
+        ad_mass_entries: Optional[Sequence[dict]] = None,
 ):
     """Attach stacked legends above the figure.
 
     ``legends`` controls which groups are drawn. Valid entries are
-    ``"calibration"``, ``"dataset"``, ``"heads"``, ``"models"``.
+    ``"calibration"``, ``"dataset"``, ``"heads"``, ``"models"``,
+    ``"ad_mass"``.
     """
     y_start_origin: float = y_start
     if legends is None:
@@ -67,6 +69,7 @@ def plot_legend(
         bool("dataset" in legends and dataset_markers is not None and dataset_pretty is not None),
         bool("heads" in legends and head_order is not None and head_linestyles is not None),
         bool("models" in legends and active_models is not None and model_colors is not None),
+        bool("ad_mass" in legends and ad_mass_entries),
     ])
 
     if in_figure:
@@ -178,6 +181,28 @@ def plot_legend(
         ]
         labels = ["Calibration", "Calibrated", "Uncalibrated"]
         add_legend(handles, labels, ncol=3)
+
+    if "ad_mass" in legends and ad_mass_entries:
+        entries = [dict(e) for e in ad_mass_entries]
+        handles = [Line2D([], [], linestyle="none", label="FPR Cut")]
+        labels = ["FPR Cut"]
+        marker_scale = style.object_scale if style is not None else 1.0
+        for entry in entries:
+            color = entry.get("color", "black")
+            label = entry.get("label", "")
+            handles.append(
+                Line2D(
+                    [0],
+                    [0],
+                    marker="s",
+                    markersize=14 * marker_scale,
+                    linestyle="",
+                    color=color,
+                    markeredgecolor="black",
+                )
+            )
+            labels.append(label)
+        add_legend(handles, labels, ncol=len(handles))
 
     if CMS_label:
         fig.text(

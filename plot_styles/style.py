@@ -95,3 +95,12 @@ HEAD_LINESTYLES = {
     "Cls+Asn": "--",
     "Cls+Asn+Seg": ":",
 }
+
+AD_MASS_FPR_ORDER = [1.0, 0.3, 0.1, 0.01, 0.001]
+AD_MASS_FPR_COLORS = {
+    1.0: "#E69F00",
+    0.3: "#009E73",
+    0.1: "#0072B2",
+    0.01: "#CC79A7",
+    0.001: "#D55E00",
+}

@@ -15,6 +15,7 @@ from plot_styles.high_level.plot_bar_line import plot_metric_scatter, plot_metri
 from plot_styles.high_level.plot_systematics import plot_systematic_scatter
 from plot_styles.sic import sic_plot_individual
 from plot_styles.ad_bar import plot_ad_sig_summary, plot_ad_gen_summary
+from plot_styles.ad_mass import load_ad_mass_payload, plot_ad_mass_distribution
 from plot_styles.core.legend import plot_legend, plot_only_legend
 from plot_styles.core.theme import PlotStyle, scaled_fig_size, use_style
 from plot_styles.core.style_axis import apply_nature_axis_style
@@ -318,6 +319,72 @@ DEFAULT_AD_CONFIG = {
         "include_uncalibrated": False,
         "with_legend": False,
         "style": PlotStyle(base_font_size=20.0, tick_label_size=19.0, full_axis=True),
+    },
+    "mass_distribution": {
+        "enabled": True,
+        "fpr_thresholds": [1.0, 0.3, 0.1],
+        "cms_label": "2016 CMS Open Data DoubleMuon",
+        "cms_label_size": 16.0,
+        "cms_label_weight": "bold",
+        "cms_label_x": 0.01,
+        "cms_label_y": 1.01,
+        "cme_lumi_label": r"$8.7\ \mathrm{fb}^{-1},\ \sqrt{s}=13\ \mathrm{TeV}$",
+        "cme_lumi_size": 13.0,
+        "cme_lumi_x": 0.99,
+        "cme_lumi_y": 1.01,
+        "cme_lumi_style": "italic",
+        "cme_lumi_weight": "normal",
+        "legend_loc": (0.7, 0.65),
+        "legend_font_size": 14.0,
+        "legend_ncols": 1,
+        "legend_marker_size": 12,
+        "legend_handlelength": 1.2,
+        "legend_labelspacing": 0.45,
+        "legend_columnspacing": 0.9,
+        "legend_borderaxespad": 0.25,
+        "fig_size": (8.5, 8),
+        "text_font_size": 14.0,
+        "text_line_spacing": 0.041,
+        "y_min": 3,
+        "y_max": 1.5e3,
+        "x_min": 6,
+        "x_max": 14,
+        "lower_panel": {
+            "enabled": True,
+            "fpr_thresholds": [0.1],
+            "height_ratio": (2.5, 1),
+            "y_label": "Data - Predict",
+            "y_min": -10,
+            "y_max": 30,
+            "nbins": 2,
+            "show_markers": False,
+        },
+        "f_name": "ad_mass_distribution",
+        "plot_files": [
+            {
+                "path": "bump_hunting_12bins_quintic_fit_seed194286.npz",
+                "f_name": "ad_mass_distribution",
+                "caption": "AD: mass distribution (12-bin quintic fit)",
+            },
+            {
+                "path": "bump_hunting_12bins_quintic_fit_no_signal_seed194286.npz",
+                "f_name": "ad_mass_distribution_no_signal",
+                "caption": "AD: mass distribution (12-bin quintic fit)",
+                "y_min": 1.5,
+                "y_max": 1e3,
+                "lower_panel": {
+                    "y_min": -10,
+                    "y_max": 13,
+                },
+            }
+        ],
+        "style": PlotStyle(
+            base_font_size=18.0,
+            tick_label_size=17.0,
+            axis_label_size=18.0,
+            legend_size=15.0,
+            full_axis=True,
+        ),
     },
 }
 
@@ -1657,6 +1724,8 @@ def read_ad_data(file_path):
         "EveNet-scratch": "Scratch",
     }
 
+    base_path = Path(file_path)
+    ad_sig_data = {}
     ad_sig = os.path.join(file_path, "significance_summary.json")
     if os.path.isfile(ad_sig):
         with open(ad_sig) as f:
@@ -1668,7 +1737,7 @@ def read_ad_data(file_path):
         Returns a DataFrame: model | channel | median | lower | upper
         """
         records = []
-        for model, channels in model_stats.items():
+        for model, channels in (model_stats or {}).items():
             for channel, qvals in channels.items():
                 q2 = qvals
                 lower_p = (1 - cl) / 2 * 100
@@ -1678,7 +1747,7 @@ def read_ad_data(file_path):
                 upper = np.percentile(q2, upper_p)
 
                 m = re.match(r"train-(OS|SS)-test-(OS|SS)", channel)
-                train_type, test_type = m.groups()
+                train_type, test_type = m.groups() if m else (None, None)
 
                 records.append({
                     "raw_model": model,
@@ -1696,6 +1765,7 @@ def read_ad_data(file_path):
 
     ad_sig_df = compute_channel_significance(ad_sig_data)
 
+    ad_gen_data = {}
     ad_gen = os.path.join(file_path, "boostrap_summary.json")
     if os.path.isfile(ad_gen):
         with open(ad_gen) as f:
@@ -1703,7 +1773,7 @@ def read_ad_data(file_path):
 
     def compute_channel_generation(model_stats):
         records = []
-        for ibootstrap, summary in model_stats.items():
+        for ibootstrap, summary in (model_stats or {}).items():
             for label, val in summary.items():
                 if "after cut" not in val:
                     continue
@@ -1730,10 +1800,18 @@ def read_ad_data(file_path):
         return df
 
     ad_gen_df = compute_channel_generation(ad_gen_data)
+    ad_mass_payloads = {}
+    for npz_path in sorted(base_path.glob("*.npz")):
+        try:
+            ad_mass_payloads[npz_path.name] = load_ad_mass_payload(npz_path)
+        except Exception as exc:
+            print(f"[WARN] Failed to load AD mass payload from {npz_path}: {exc}")
 
     return {
         'sig': ad_sig_df,
-        'gen': ad_gen_df
+        'gen': ad_gen_df,
+        'mass_payloads': ad_mass_payloads,
+        'base_path': str(base_path),
     }
 
 
@@ -1751,9 +1829,10 @@ def plot_ad_results(
 ):
     """Plot AD figures with optional per-figure font overrides.
 
-    ``sig``, ``gen_mmd``, and ``gen_calibration`` configs may provide a
-    ``style`` entry to override the base :class:`PlotStyle` for
-    fine-grained control over fonts or scaling in each plot.
+    ``sig``, ``gen_mmd``, ``gen_calibration``, and ``mass_distribution``
+    configs may provide a ``style`` entry to override the base
+    :class:`PlotStyle` for fine-grained control over fonts or scaling in
+    each plot.
     """
     cfg = _merge_configs(DEFAULT_AD_CONFIG, config)
 
@@ -1826,10 +1905,134 @@ def plot_ad_results(
         )
         gen_outputs.append(os.path.join(plot_dir, f_name))
 
+    mass_outputs = []
+    mass_meta = []
+    mass_cfg = cfg.get("mass_distribution", {})
+    if mass_cfg.get("enabled", False):
+        payload_cache = data.get("mass_payloads", {}) if isinstance(data, dict) else {}
+        base_path = Path(data.get("base_path", "data/AD")) if isinstance(data, dict) else Path("data/AD")
+
+        mass_style_base = _resolve_style(style, mass_cfg.get("style"))
+        mass_scale_base = fig_scale if fig_scale is not None else (
+            mass_style_base.figure_scale if mass_style_base else base_scale
+        )
+
+        plot_files = mass_cfg.get("plot_files", [])
+        if not plot_files and payload_cache:
+            plot_files = [{"path": name} for name in sorted(payload_cache.keys())]
+
+        for idx, file_cfg_raw in enumerate(plot_files):
+            file_cfg = {"path": file_cfg_raw} if isinstance(file_cfg_raw, str) else dict(file_cfg_raw)
+            rel_path = file_cfg.get("path")
+            if not rel_path:
+                continue
+
+            npz_path = Path(rel_path)
+            if not npz_path.is_absolute():
+                npz_path = base_path / npz_path
+
+            payload = payload_cache.get(npz_path.name)
+            if payload is None or Path(payload.get("npz_path", "")).resolve() != npz_path.resolve():
+                try:
+                    payload = load_ad_mass_payload(npz_path)
+                except Exception as exc:
+                    print(f"[WARN] Skipping AD mass plot for {npz_path}: {exc}")
+                    continue
+
+            file_style = _resolve_style(mass_style_base, file_cfg.get("style"))
+            file_scale = file_cfg.get(
+                "fig_scale",
+                fig_scale if fig_scale is not None else (file_style.figure_scale if file_style else mass_scale_base),
+            )
+            file_aspect = file_cfg.get("fig_aspect", fig_aspect)
+
+            default_f_name = mass_cfg.get("f_name", "ad_mass_distribution")
+            if len(plot_files) > 1 and default_f_name == "ad_mass_distribution":
+                default_f_name = f"{default_f_name}_{npz_path.stem}"
+            f_name = file_cfg.get("f_name", default_f_name)
+            file_lower_cfg = mass_cfg.get("lower_panel", {}) or {}
+            if isinstance(file_cfg.get("lower_panel"), dict):
+                file_lower_cfg = _merge_configs(file_lower_cfg, file_cfg.get("lower_panel"))
+
+            mass_result = plot_ad_mass_distribution(
+                payload,
+                fpr_thresholds=file_cfg.get("fpr_thresholds", mass_cfg.get("fpr_thresholds")),
+                fig_size=file_cfg.get("fig_size", mass_cfg.get("fig_size", (12, 9))),
+                fig_scale=file_scale,
+                fig_aspect=file_aspect,
+                y_min=file_cfg.get("y_min", mass_cfg.get("y_min")),
+                y_max=file_cfg.get("y_max", mass_cfg.get("y_max")),
+                x_min=file_cfg.get("x_min", mass_cfg.get("x_min")),
+                x_max=file_cfg.get("x_max", mass_cfg.get("x_max")),
+                cms_label=file_cfg.get("cms_label", mass_cfg.get("cms_label", "2016 CMS Open Data DoubleMuon")),
+                cms_label_size=file_cfg.get("cms_label_size", mass_cfg.get("cms_label_size")),
+                cms_label_weight=file_cfg.get("cms_label_weight", mass_cfg.get("cms_label_weight", "bold")),
+                cms_label_x=file_cfg.get("cms_label_x", mass_cfg.get("cms_label_x", 0.01)),
+                cms_label_y=file_cfg.get("cms_label_y", mass_cfg.get("cms_label_y", 0.99)),
+                cme_lumi_label=file_cfg.get("cme_lumi_label", mass_cfg.get("cme_lumi_label")),
+                cme_lumi_size=file_cfg.get("cme_lumi_size", mass_cfg.get("cme_lumi_size")),
+                cme_lumi_x=file_cfg.get("cme_lumi_x", mass_cfg.get("cme_lumi_x", 0.99)),
+                cme_lumi_y=file_cfg.get("cme_lumi_y", mass_cfg.get("cme_lumi_y", 0.99)),
+                cme_lumi_style=file_cfg.get("cme_lumi_style", mass_cfg.get("cme_lumi_style", "italic")),
+                cme_lumi_weight=file_cfg.get("cme_lumi_weight", mass_cfg.get("cme_lumi_weight", "normal")),
+                legend_loc=file_cfg.get("legend_loc", mass_cfg.get("legend_loc", (0.62, 0.68))),
+                legend_font_size=file_cfg.get("legend_font_size", mass_cfg.get("legend_font_size")),
+                legend_ncols=file_cfg.get("legend_ncols", mass_cfg.get("legend_ncols", 1)),
+                legend_bbox_to_anchor=file_cfg.get("legend_bbox_to_anchor", mass_cfg.get("legend_bbox_to_anchor")),
+                legend_marker_size=file_cfg.get("legend_marker_size", mass_cfg.get("legend_marker_size", 10.5)),
+                legend_handlelength=file_cfg.get("legend_handlelength", mass_cfg.get("legend_handlelength", 1.8)),
+                legend_labelspacing=file_cfg.get("legend_labelspacing", mass_cfg.get("legend_labelspacing", 0.35)),
+                legend_borderaxespad=file_cfg.get("legend_borderaxespad", mass_cfg.get("legend_borderaxespad", 0.25)),
+                legend_columnspacing=file_cfg.get("legend_columnspacing", mass_cfg.get("legend_columnspacing", 0.9)),
+                text_block_alpha=file_cfg.get("text_block_alpha", mass_cfg.get("text_block_alpha", 0.85)),
+                text_font_size=file_cfg.get("text_font_size", mass_cfg.get("text_font_size")),
+                text_line_spacing=file_cfg.get("text_line_spacing", mass_cfg.get("text_line_spacing", 0.043)),
+                text_x=file_cfg.get("text_x", mass_cfg.get("text_x", 0.05)),
+                text_y=file_cfg.get("text_y", mass_cfg.get("text_y", 0.95)),
+                lower_panel=file_cfg.get("lower_panel_enabled", file_lower_cfg.get("enabled", False)),
+                lower_panel_fpr_thresholds=file_cfg.get(
+                    "lower_panel_fpr_thresholds",
+                    file_lower_cfg.get("fpr_thresholds"),
+                ),
+                lower_panel_height_ratio=file_cfg.get(
+                    "lower_panel_height_ratio",
+                    file_lower_cfg.get("height_ratio", (3.4, 1.25)),
+                ),
+                lower_panel_label=file_cfg.get(
+                    "lower_panel_label",
+                    file_lower_cfg.get("y_label", "Data - Predict"),
+                ),
+                lower_panel_y_min=file_cfg.get("lower_panel_y_min", file_lower_cfg.get("y_min")),
+                lower_panel_y_max=file_cfg.get("lower_panel_y_max", file_lower_cfg.get("y_max")),
+                lower_panel_nbins=file_cfg.get("lower_panel_nbins", file_lower_cfg.get("nbins", 5)),
+                lower_panel_show_markers=file_cfg.get(
+                    "lower_panel_show_markers",
+                    file_lower_cfg.get("show_markers", False),
+                ),
+                show_upsilon=file_cfg.get("show_upsilon", mass_cfg.get("show_upsilon", True)),
+                show_fit_band=file_cfg.get("show_fit_band", mass_cfg.get("show_fit_band", True)),
+                fit_band_samples=file_cfg.get("fit_band_samples", mass_cfg.get("fit_band_samples", 200)),
+                f_name=_with_ext(f_name, file_format),
+                plot_dir=plot_dir,
+                file_format=file_format,
+                dpi=dpi,
+                style=file_style,
+            )
+            mass_result["caption"] = file_cfg.get(
+                "caption",
+                f"AD: mass distribution ({npz_path.stem.replace('_', ' ')})",
+            )
+            mass_result["source_name"] = npz_path.name
+            if mass_result.get("output_path"):
+                mass_outputs.append(mass_result["output_path"])
+                mass_meta.append(mass_result)
+
     return {
         "legend": None,
         "sig": [os.path.join(plot_dir, _with_ext("ad_significance", file_format))],
         "gen": gen_outputs,
+        "mass": mass_outputs,
+        "mass_meta": mass_meta,
     }
 
 
@@ -1842,9 +2045,8 @@ def plot_ad_results_webpage(
         style: PlotStyle | None = None,
         fig_scale: float | None = None,
         fig_aspect: float | None = None,
+        config: dict | None = None,
 ):
-    plot_dir = os.path.join(output_root, "AD")
-
     outputs = plot_ad_results(
         data,
         output_root=output_root,
@@ -1854,6 +2056,7 @@ def plot_ad_results_webpage(
         style=style,
         fig_scale=fig_scale,
         fig_aspect=fig_aspect,
+        config=config,
     )
 
     return outputs

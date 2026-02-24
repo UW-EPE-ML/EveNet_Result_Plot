@@ -502,6 +502,52 @@ def _ad_generation_table(df, *, models_order: List[str]) -> Dict[str, object] | 
     )
 
 
+def _ad_mass_table(summary: Dict[str, object] | None) -> Dict[str, object] | None:
+    if not summary:
+        return None
+
+    source = Path(summary.get("npz_path", "")).name if summary.get("npz_path") else None
+    sb_range = None
+    sr_range = None
+    if summary.get("sb_left") is not None and summary.get("sb_right") is not None:
+        sb_range = f"{summary['sb_left']:.3g}-{summary['sb_right']:.3g}"
+    if summary.get("sr_left") is not None and summary.get("sr_right") is not None:
+        sr_range = f"{summary['sr_left']:.3g}-{summary['sr_right']:.3g}"
+
+    rows = []
+    for row in summary.get("threshold_rows", []):
+        rows.append(
+            {
+                "source": source,
+                "channel": summary.get("channel"),
+                "fit": summary.get("fit_name"),
+                "SR_bins": summary.get("num_bins_sr"),
+                "SB_range_GeV": sb_range,
+                "SR_range_GeV": sr_range,
+                "FPR": row.get("fpr_threshold"),
+                "significance": row.get("significance"),
+                "selected_events": row.get("selected_events"),
+                "bonus_significance": summary.get("bonus_significance"),
+            }
+        )
+
+    return _table_from_dicts(
+        rows,
+        header_order=[
+            "source",
+            "channel",
+            "fit",
+            "SR_bins",
+            "SB_range_GeV",
+            "SR_range_GeV",
+            "FPR",
+            "significance",
+            "selected_events",
+            "bonus_significance",
+        ],
+    )
+
+
 def main():
     parser = argparse.ArgumentParser(description="Generate static plot gallery")
     parser.add_argument("--output-dir", default="site", help="Directory to write the static site")
@@ -772,6 +818,17 @@ def main():
         )
         ad_sig_table = _ad_significance_table(ad_data["sig"])
         ad_gen_table = _ad_generation_table(ad_data["gen"], models_order=DEFAULT_AD_CONFIG["models"])
+        ad_mass_meta = ad_outputs.get("mass_meta", [])
+        ad_mass_plots = []
+        for i, path in enumerate(ad_outputs.get("mass", [])):
+            summary = ad_mass_meta[i] if i < len(ad_mass_meta) else None
+            ad_mass_plots.append(
+                {
+                    "src": str(Path(path).relative_to(output_dir)),
+                    "caption": summary.get("caption") if summary else "AD: mass distribution",
+                    "table": _ad_mass_table(summary),
+                }
+            )
         ad_plots = [
             *[
                 {
@@ -792,12 +849,13 @@ def main():
                     ad_outputs["gen"],
                 )
             ],
+            *ad_mass_plots,
         ]
         sections.append(
             _section(
                 "ad",
                 "Dimuon anomaly-detection benchmark",
-                "Significance summaries and calibration metrics across OS/SS channels.",
+                "Significance summaries, calibration metrics, and mass-distribution bump-hunting panels.",
                 ad_plots,
             )
         )
