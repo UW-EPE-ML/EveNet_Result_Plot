@@ -142,6 +142,8 @@ def _resolve_threshold_indices(available: Sequence[float], requested: Sequence[f
 
 
 def _format_threshold_label(threshold: float) -> str:
+    if np.isclose(float(threshold), -1.0, rtol=1e-9, atol=1e-12):
+        return "L-reweighted"
     percentage = 100.0 * threshold
     percentage_text = f"{percentage:.3g}"
     return f"FPR ≤ {percentage_text}%"
@@ -214,6 +216,7 @@ def plot_ad_mass_distribution(
         x_min: float | None = None,
         x_max: float | None = None,
         cms_label: str | None = "2016 CMS Open Data DoubleMuon",
+        show_cms_label: bool = True,
         legend_loc: str | tuple[float, float] = (0.62, 0.68),
         legend_font_size: float | None = None,
         legend_ncols: int = 1,
@@ -227,12 +230,19 @@ def plot_ad_mass_distribution(
         cms_label_weight: str = "bold",
         cms_label_x: float = 0.01,
         cms_label_y: float = 0.99,
-        cme_lumi_label: str | None = r"$8.7\ \mathrm{fb}^{-1},\ \sqrt{s}=13\ \mathrm{TeV}$",
+        cme_lumi_label: str | None = r"$\sqrt{s}=13\ \mathrm{TeV},\ 8.7\ \mathrm{fb}^{-1}$",
+        show_cme_lumi_label: bool = True,
         cme_lumi_size: float | None = None,
         cme_lumi_x: float = 0.99,
         cme_lumi_y: float = 0.99,
         cme_lumi_style: str = "italic",
         cme_lumi_weight: str = "normal",
+        sideband_text: str | None = None,
+        sideband_text_y: float = 0.84,
+        sideband_text_x_offset: float = 0.015,
+        sideband_text_size: float | None = None,
+        sideband_text_weight: str = "normal",
+        sideband_text_style: str = "normal",
         text_block_alpha: float = 0.85,
         text_font_size: float | None = None,
         text_line_spacing: float = 0.043,
@@ -248,6 +258,7 @@ def plot_ad_mass_distribution(
         lower_panel_show_markers: bool = False,
         show_upsilon: bool = True,
         show_fit_band: bool = True,
+        show_l_reweighted_upper: bool = True,
         fit_band_samples: int = 200,
         f_name: str | None = None,
         plot_dir: str = ".",
@@ -282,7 +293,7 @@ def plot_ad_mass_distribution(
     pcovs = save_data["pcovs"]
     significances = [float(v) for v in save_data["significances"]]
     filtered_masses = save_data["filtered_masses"]
-    y_vals_list = save_data["y_vals"]
+    l_weighting_data = save_data.get("l-weighting", save_data.get("l_weighting"))
 
     resolved_y_min = float(y_min if y_min is not None else save_data.get("ymin", 1e-2))
     resolved_y_max = float(y_max if y_max is not None else save_data.get("ymax", 1e5))
@@ -325,20 +336,61 @@ def plot_ad_mass_distribution(
     threshold_rows = []
     legend_entries = []
 
+    def _weights_for_index(index: int, masses_arr: np.ndarray) -> np.ndarray | None:
+        if l_weighting_data is None:
+            return None
+
+        candidate = l_weighting_data
+        if isinstance(candidate, (list, tuple)) and len(candidate) == len(thresholds):
+            candidate = candidate[index]
+        elif (
+            isinstance(candidate, np.ndarray)
+            and candidate.dtype == object
+            and candidate.shape
+            and candidate.shape[0] == len(thresholds)
+        ):
+            candidate = candidate[index]
+
+        try:
+            weights = _coerce_np(candidate, dtype=float).reshape(-1)
+        except Exception:
+            return None
+
+        if weights.size != masses_arr.size:
+            return None
+
+        if not np.all(np.isfinite(weights)):
+            weights = np.nan_to_num(weights, nan=0.0, posinf=0.0, neginf=0.0)
+        return weights
+
     for color_idx, idx in enumerate(selected_indices):
         threshold = thresholds[idx]
-        popt = _coerce_np(popts[idx], dtype=float)
+        is_l_weighted = np.isclose(threshold, -1.0, rtol=1e-9, atol=1e-12)
+        draw_on_upper = not (is_l_weighted and not show_l_reweighted_upper)
+        try:
+            popt = _coerce_np(popts[idx], dtype=float)
+        except Exception:
+            popt = None
         masses = _coerce_np(filtered_masses[idx], dtype=float)
-        y_vals = _coerce_np(y_vals_list[idx], dtype=float)
-        significance = significances[idx]
+        significance = significances[idx] if idx < len(significances) else float("nan")
         color = _resolve_threshold_color(threshold, color_idx)
 
         label = _format_threshold_label(threshold)
+        hist_weights = _weights_for_index(idx, masses) if is_l_weighted else None
+        needs_l_weighting = draw_on_upper or (ax_lower is not None and idx in lower_panel_index_set)
+        if is_l_weighted and needs_l_weighting and hist_weights is None:
+            print(
+                "[WARN] fpr=-1 selected but 'l-weighting' is missing or size-mismatched; "
+                "falling back to unweighted histogram."
+            )
 
-        prediction_all = _poly_fit(plot_centers_all, *popt)
-        ax_main.plot(plot_centers_all, prediction_all, lw=2.2, linestyle="--", color=color)
+        prediction_all = None
+        if popt is not None and popt.size > 0:
+            prediction_all = _poly_fit(plot_centers_all, *popt)
+        if draw_on_upper and prediction_all is not None:
+            ax_main.plot(plot_centers_all, prediction_all, lw=2.2, linestyle="--", color=color)
 
-        if show_fit_band:
+        if draw_on_upper and show_fit_band and popt is not None:
             try:
                 pcov = _coerce_np(pcovs[idx], dtype=float)
                 if pcov.ndim == 2 and np.all(np.isfinite(pcov)):
@@ -365,18 +417,20 @@ def plot_ad_mass_distribution(
             except Exception:
                 pass
 
-        ax_main.hist(
-            masses,
-            bins=plot_bins_all,
-            histtype="step",
-            linewidth=2.4,
-            color=color,
-            label=label,
-            alpha=0.9,
-        )
+        if draw_on_upper:
+            ax_main.hist(
+                masses,
+                bins=plot_bins_all,
+                histtype="step",
+                linewidth=2.4,
+                color=color,
+                label=label,
+                alpha=0.9,
+                weights=hist_weights,
+            )
 
-        if ax_lower is not None and idx in lower_panel_index_set:
-            data_counts, _ = np.histogram(masses, bins=plot_bins_all)
+        if ax_lower is not None and idx in lower_panel_index_set and prediction_all is not None:
+            data_counts, _ = np.histogram(masses, bins=plot_bins_all, weights=hist_weights)
             residual = data_counts.astype(float) - prediction_all
             residual = np.nan_to_num(residual, nan=0.0, posinf=0.0, neginf=0.0)
             ax_lower.stairs(
@@ -393,15 +447,17 @@ def plot_ad_mass_distribution(
                 "fpr_threshold": threshold,
                 "significance": significance,
                 "selected_events": int(masses.shape[0]),
+                "weighted_yield": float(np.sum(hist_weights)) if hist_weights is not None else float(masses.shape[0]),
             }
         )
-        legend_entries.append(
-            {
-                "label": label,
-                "color": color,
-                "linestyle": "-",
-            }
-        )
+        if draw_on_upper:
+            legend_entries.append(
+                {
+                    "label": label,
+                    "color": color,
+                    "linestyle": "-",
+                }
+            )
 
     channel_label = "Opposite Sign" if channel.upper() == "OS" else "Same Sign" if channel.upper() == "SS" else channel
     text_lines: list[str] = []
@@ -462,6 +518,35 @@ def plot_ad_mass_distribution(
         if ax_lower is not None:
             _plot_upsilon_lines(ax_lower, with_labels=False)
 
+    if sideband_text:
+        x_text = sideband_text_x_offset
+        resolved_sideband_text_size = (
+            sideband_text_size
+            if sideband_text_size is not None
+            else (
+                legend_font_size
+                if legend_font_size is not None
+                else (
+                    style.legend_size
+                    if style is not None and style.legend_size is not None
+                    else 12.0
+                )
+            )
+        )
+        # trans_sideband = blended_transform_factory(ax_main.transData, ax_main.transAxes)
+        ax_main.text(
+            x_text,
+            sideband_text_y,
+            sideband_text,
+            transform=ax_main.transAxes,
+            ha="left",
+            va="center",
+            fontsize=resolved_sideband_text_size,
+            fontweight=sideband_text_weight,
+            fontstyle=sideband_text_style,
+            alpha=0.9,
+        )
+
     if legend_entries:
         resolved_legend_size = (
             legend_font_size
@@ -506,7 +591,7 @@ def plot_ad_mass_distribution(
             columnspacing=legend_columnspacing,
         )
 
-    if cms_label:
+    if show_cms_label and cms_label:
         resolved_cms_size = (
             cms_label_size
             if cms_label_size is not None
@@ -526,7 +611,7 @@ def plot_ad_mass_distribution(
             fontsize=resolved_cms_size,
             fontweight=cms_label_weight,
         )
-    if cme_lumi_label:
+    if show_cme_lumi_label and cme_lumi_label:
         resolved_cme_lumi_size = (
             cme_lumi_size
             if cme_lumi_size is not None
