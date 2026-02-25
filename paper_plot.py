@@ -175,7 +175,7 @@ DEFAULT_BSM_CONFIG = {
         "style": DEFAULT_LEGEND_STYLE,
     },
     "loss": {
-        "fig_size": (6, 6), "grid": False,
+        "fig_size": (4.5, 4.5), "grid": False,
         "style": PlotStyle(base_font_size=20.0, tick_label_size=19.0)
     },
     "pair_scatter": {
@@ -217,8 +217,8 @@ DEFAULT_BSM_CONFIG = {
         "y_min": [0, 0, 0.75],
         "y_max": [5.5, 5.5, 6.5],
         "style": DEFAULT_STYLE,
-        "fig_size_bar": (4, 3.5),
-        "fig_size_scatter": (7.5, 6),
+        "fig_size_bar": (5, 4.37),
+        "fig_size_scatter": (15, 8.4),
         "fig_size_curve": (7.5, 6),
         "bar_style": DEFAULT_BAR_STYLE,
         "scatter_style": DEFAULT_STYLE,
@@ -226,7 +226,7 @@ DEFAULT_BSM_CONFIG = {
     },
     "systematics": {
         "sic": {
-            "fig_size": (13, 2.25),
+            "fig_size": (10, 3.3),
             "style": PlotStyle(
                 base_font_size=20.0, tick_label_size=19.0, axis_label_size=19.0,
                 legend_size=17.0, legend_anchor=(0.13, 0.07), legend_loc="lower left",
@@ -235,7 +235,7 @@ DEFAULT_BSM_CONFIG = {
             # "cmap": "coolwarm",
             "cmap": LinearSegmentedColormap.from_list(
                 "custom_jes",
-                ["#3F5EFB", "#E5ECF6", "#FC466B", ],  # low → mid → high
+                ["#0072B2", "#E5ECF6", "#D55E00", ],  # low → mid → high
                 N=256
             ),
             "colorbar_label": r"$\alpha_\mathrm{JES}$ [%]",
@@ -247,7 +247,7 @@ DEFAULT_BSM_CONFIG = {
             "label": "SIC (normalized)",
         },
         "pairing": {
-            "fig_size": (13, 2.25),
+            "fig_size": (10, 3.3),
             "style": PlotStyle(
                 base_font_size=20.0, tick_label_size=19.0, axis_label_size=19.0,
                 legend_size=17.0, legend_anchor=(0.88, 0.07), legend_loc="lower right",
@@ -256,7 +256,7 @@ DEFAULT_BSM_CONFIG = {
             # "cmap": "coolwarm",
             "cmap": LinearSegmentedColormap.from_list(
                 "custom_jes",
-                ["#3F5EFB", "#E5ECF6", "#FC466B", ],  # low → mid → high
+                ["#0072B2", "#E5ECF6", "#D55E00", ],  # low → mid → high
                 N=256
             ),
             "colorbar_label": r"$\alpha_\mathrm{JES}$ [%]",
