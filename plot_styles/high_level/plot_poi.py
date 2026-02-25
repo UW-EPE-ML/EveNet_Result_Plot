@@ -100,7 +100,14 @@ def plot_qe_poi(
     uncertainty_precision: int = 4,
     delta_precision: int = 2,
     significance_precision: int = 2,  # kept for backward config compatibility
+    model_row_gap: float = 1.0,
+    intra_group_gap: float = 1.0,
     text_font_family: str | None = None,
+    table_text_size: float | None = None,
+    col_pad: tuple[int, int, int] = (3, 4, 4),
+    header_gap: float = 0.24,
+    top_padding: float = 0.10,
+    bottom_padding: float = 0.45,
     fig_size: tuple[float, float] = (15, 8),
     fig_scale: float = 1.0,
     fig_aspect: float | None = None,
@@ -153,7 +160,7 @@ def plot_qe_poi(
             gridspec_kw={"width_ratios": width_ratios, "wspace": 0.02},
         )
 
-    y_base = np.arange(len(active_models), dtype=float)
+    y_base = np.arange(len(active_models), dtype=float) * float(model_row_gap)
     if len(resolved_sizes) == 1:
         shifts = np.array([0.0], dtype=float)
     else:
@@ -161,7 +168,7 @@ def plot_qe_poi(
             -(len(resolved_sizes) - 1) / (2 * len(resolved_sizes)),
             (len(resolved_sizes) - 1) / (2 * len(resolved_sizes)),
             len(resolved_sizes),
-        )
+        ) * float(intra_group_gap)
 
     marker_scale = style.object_scale if style is not None else 1.0
     text_size = (
@@ -169,6 +176,8 @@ def plot_qe_poi(
         if style is not None and style.tick_label_size is not None
         else plt.rcParams.get("ytick.labelsize", 12)
     )
+    if table_text_size is not None:
+        text_size = table_text_size
     left_text_size = left_indicator_fontsize if left_indicator_fontsize is not None else max(float(text_size) + 2.0, 14.0)
     row_line_width = 0.8 * marker_scale
 
@@ -196,16 +205,23 @@ def plot_qe_poi(
     if right_max <= right_min:
         right_max = right_min + 0.5
 
-    x_text = right_max - (right_max - right_min) * text_x_shift_fraction
-    header_y = y_base[-1] + 0.82 if len(y_base) else 0.82
-    y_top = header_y + 0.35
-    y_bottom = y_base[0] - 0.6 if len(y_base) else -0.6
+    max_shift = float(np.max(np.abs(shifts))) if len(shifts) else 0.0
+    header_y = (y_base[-1] + max_shift + header_gap) if len(y_base) else header_gap
+    y_top = header_y + top_padding
+    y_bottom = y_base[0] - bottom_padding if len(y_base) else -bottom_padding
 
     if show_row_separators and len(y_base) > 1:
         for idx in range(len(y_base) - 1):
-            y_sep = idx + 0.5
+            y_sep = 0.5 * (y_base[idx] + y_base[idx + 1])
             ax_left.axhline(y_sep, color="0.75", linestyle="--", linewidth=row_line_width, zorder=0)
             ax_right.axhline(y_sep, color="0.75", linestyle="--", linewidth=row_line_width, zorder=0)
+
+    x_text = right_max - (right_max - right_min) * text_x_shift_fraction
+    text_kwargs = {}
+    if text_font_family is not None:
+        text_kwargs["family"] = text_font_family
+
+    row_entries: list[dict] = []
 
     for model_idx, model in enumerate(active_models):
         for size_idx, size in enumerate(resolved_sizes):
@@ -260,48 +276,74 @@ def plot_qe_poi(
             else:
                 delta_str = "n/a"
             size_label = dataset_pretty.get(str(size), f"{size}")
-            if np.isfinite(unc_plot):
-                unc_term = rf"^{{+{unc_plot:<7.{uncertainty_precision}f}}}_{{-{unc_plot:<7.{uncertainty_precision}f}}}"
-            else:
-                unc_term = r""
+            d_str = f"{d_val:.{concurrence_precision}f}"
+            unc_str = f"{unc_plot:.{uncertainty_precision}f}" if np.isfinite(unc_plot) else "n/a"
+            row_entries.append(
+                {
+                    "y": y_val,
+                    "color": color,
+                    "size_raw": size_label,
+                    "size_tex": size_label.replace("%", r"\%"),
+                    "d": d_str,
+                    "unc": unc_str,
+                    "delta": delta_str,
+                }
+            )
+
+    if row_entries:
+        size_header = "Size"
+        d_header = "D"
+        unc_header = rf"\sigma\times{uncertainty_scale:g}"
+        delta_header = rf"D / \sigma [\%]"
+
+        size_w = max(len(size_header), max(len(r["size_raw"]) for r in row_entries))
+        d_w = max(len(d_header), max(len(r["d"]) for r in row_entries))
+        unc_w = max(len(unc_header), max(len(r["unc"]) for r in row_entries))
+        pad_size, pad_d, pad_unc = col_pad
+
+        def _pad_math(text: str, width: int, extra: int) -> str:
+            return text + "~" * (max(width - len(text), 0) + extra)
+
+        for r in row_entries:
             row_text = (
-                f"{size_label}: "
                 rf"$"
-                rf"{d_val:<8.{concurrence_precision}f} "
-                rf"~~{unc_term} "
-                rf"~~~{delta_str}"
+                rf"{_pad_math(r['size_tex'], size_w, pad_size)}"
+                rf"{_pad_math(r['d'], d_w, pad_d)}"
+                rf"{_pad_math(r['unc'], unc_w, pad_unc)}"
+                rf"{r['delta']}"
                 rf"$"
             )
-            text_kwargs = {}
-            if text_font_family is not None:
-                text_kwargs["family"] = text_font_family
             ax_right.text(
                 x_text,
-                y_val,
+                r["y"],
                 row_text,
                 ha="right",
                 va="center",
                 fontsize=text_size,
-                color=color,
+                color=r["color"],
                 zorder=9,
                 **text_kwargs,
             )
 
-    header_text = rf"Size: $D~~unc*{uncertainty_scale:g}~~\Delta D[\%]$"
-    header_kwargs = {}
-    if text_font_family is not None:
-        header_kwargs["family"] = text_font_family
-    ax_right.text(
-        x_text,
-        header_y,
-        header_text,
-        ha="right",
-        va="center",
-        fontsize=text_size,
-        color="black",
-        zorder=10,
-        **header_kwargs,
-    )
+        header_text = (
+            rf"$"
+            rf"{_pad_math(size_header, size_w, pad_size)}"
+            rf"{_pad_math(d_header, d_w, pad_d)}"
+            rf"{_pad_math(unc_header, unc_w, pad_unc)}"
+            rf"{delta_header}"
+            rf"$"
+        )
+        ax_right.text(
+            x_text,
+            header_y,
+            header_text,
+            ha="right",
+            va="center",
+            fontsize=text_size,
+            color="black",
+            zorder=10,
+            **text_kwargs,
+        )
 
     model_labels = [MODEL_PRETTY.get(model, model) for model in active_models]
 
@@ -349,7 +391,7 @@ def plot_qe_poi(
         zorder=2,
     )
     ax_left.text(
-        0.72,
+        0.62,
         0.5,
         left_indicator_text,
         ha="left",
