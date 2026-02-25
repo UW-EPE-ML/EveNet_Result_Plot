@@ -12,6 +12,7 @@ from functools import reduce
 
 from plot_styles.high_level.plot_loss import plot_loss
 from plot_styles.high_level.plot_bar_line import plot_metric_scatter, plot_metric_bar
+from plot_styles.high_level.plot_poi import plot_qe_poi
 from plot_styles.high_level.plot_systematics import plot_systematic_scatter
 from plot_styles.sic import sic_plot_individual
 from plot_styles.ad_bar import plot_ad_sig_summary, plot_ad_gen_summary
@@ -104,6 +105,35 @@ DEFAULT_QE_CONFIG = {
         "y_min": 1.5,
         "y_max": 1.7,
         "style": DEFAULT_BAR_STYLE,
+    },
+    "poi": {
+        "enabled": True,
+        "fig_size": (15, 8),
+        "x_label": r"Observable $D$",
+        "y_label": "",
+        "x_col": "concurrence",
+        "xerr_col": "uncertainty",
+        "delta_col": "deltaD",
+        "significance_col": None,
+        "d_offset": 1.0,
+        "dataset_label_fmt": "{pretty}",
+        "left_panel_xlim": (0.94, 1.04),
+        "left_indicator_x": 1.0,
+        "left_indicator_text": r"Separable state ($D = 1$)",
+        "show_row_separators": True,
+        "right_x_min_factor": 0.95,
+        "right_x_max_factor": 1.15,
+        "text_x_shift_fraction": 0.025,
+        "uncertainty_scale": 10.0,
+        "concurrence_precision": 2,
+        "uncertainty_precision": 3,
+        "delta_precision": 2,
+        "significance_precision": 2,
+        "width_ratios": (1.0, 4.0),
+        "legend": {
+            "legends": ["dataset", "models"],
+        },
+        "style": DEFAULT_STYLE,
     },
     "systematics": {
         "pairing": {
@@ -1084,6 +1114,53 @@ def plot_qe_results(
         **_save_kwargs(file_format, dpi),
     )
 
+    poi_cfg = cfg.get("poi", {})
+    poi_output = {}
+    if poi_cfg.get("enabled", True):
+        poi_style = _resolve_style(style, poi_cfg.get("style"))
+        poi_scale = fig_scale if fig_scale is not None else (poi_style.figure_scale if poi_style else base_scale)
+        fig_poi, axes_poi, active_poi = plot_qe_poi(
+            data,
+            model_order=poi_cfg.get("models", cfg["models"]),
+            train_sizes=poi_cfg.get("train_sizes", cfg["train_sizes"]),
+            dataset_pretty=QE_DATASET_PRETTY,
+            dataset_markers=QE_DATASET_MARKERS,
+            **{
+                k: v
+                for k, v in poi_cfg.items()
+                if k
+                not in {
+                    "enabled",
+                    "style",
+                    "legend",
+                    "models",
+                    "train_sizes",
+                }
+            },
+            fig_scale=poi_scale,
+            fig_aspect=fig_aspect,
+            style=poi_style,
+        )
+        if with_legend:
+            plot_legend(
+                fig_poi,
+                active_models=active_poi,
+                train_sizes=poi_cfg.get("train_sizes", cfg["train_sizes"]),
+                dataset_markers=QE_DATASET_MARKERS,
+                dataset_pretty=QE_DATASET_PRETTY,
+                model_colors=MODEL_COLORS,
+                head_order=None,
+                head_linestyles=HEAD_LINESTYLES,
+                **poi_cfg.get("legend", {}),
+                style=poi_style,
+            )
+        fig_poi.savefig(
+            os.path.join(plot_dir, _with_ext("poi", file_format)),
+            bbox_inches="tight",
+            **_save_kwargs(file_format, dpi),
+        )
+        poi_output = {"fig": fig_poi, "axes": list(axes_poi), "active_models": active_poi}
+
     systematic_output = {}
     if systematics_data is not None and not systematics_data.empty:
         syst_cases = _prepare_systematic_cases(cfg["systematics"], systematics_data)
@@ -1150,6 +1227,7 @@ def plot_qe_results(
             "scatter": {"fig": fig_delta_scatter, "axes": [ax_delta_scatter], "active_models": active_delta},
             "bar": {"fig": fig_delta_bar, "axes": [ax_delta_bar], "active_models": active_delta},
         },
+        "poi": poi_output,
         "systematics": systematic_output,
     }
 
@@ -1642,6 +1720,7 @@ def plot_qe_results_webpage(
             os.path.join(plot_dir, _with_ext("deltaD_scatter", file_format)),
             os.path.join(plot_dir, _with_ext("deltaD_bar", file_format)),
         ],
+        "poi": [os.path.join(plot_dir, _with_ext("poi", file_format))],
         "systematics": systematics_paths,
     }
 
