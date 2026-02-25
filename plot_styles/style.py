@@ -17,14 +17,14 @@
 # }
 
 BASE_MODEL_COLORS = {
-    "SSL":      "#EDA4A1",   # distinct muted teal-green (large separation)
-    "Nominal":  "#5F8FD9",   # fixed
+    "SSL":      "#D55E00",   # distinct muted teal-green (large separation)
+    "Nominal":  "#0072B2",   # fixed
     "Ablation": "#3E5F78",   # darker blue-grey for strong contrast
-    "Scratch":  "#E3C565",   # fixed
+    "Scratch":  "#E69F00",   # fixed
     "Ref.":     "#9A9A9A",   # neutral grey
     "SPANet":   "#9A9A9A",   # same grey for grouping
-    "XGBoost":  "#A9D3AD",
-    "TabPFN":   "#9A9A9A",
+    "XGBoost":  "#009E73",
+    "TabPFN":   "#CC79A7",
 }
 
 MODEL_COLORS = dict(BASE_MODEL_COLORS)
