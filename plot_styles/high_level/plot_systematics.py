@@ -66,6 +66,7 @@ def plot_systematic_scatter(
         fig_scale: float = 1.0,
         fig_aspect: float | None = None,
         x_label: str = "",
+        hide_x_axis_text: bool = False,
         label: str | None = None,
         cmap: str = "coolwarm",
         colorbar_label: str = "",
@@ -160,6 +161,9 @@ def plot_systematic_scatter(
     # ax.set_xlim(xmin - 1.0, xmax)
 
     apply_nature_axis_style(ax, style=style)
+    if hide_x_axis_text:
+        ax.set_xlabel("")
+        ax.tick_params(axis="x", which="both", labelbottom=False)
     if scatter is not None:
         # ---- Force global color range ----
         scatter.set_clim(clim_min, clim_max)  # update the scatter normalization

@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
+from matplotlib.ticker import MaxNLocator
 
 from plot_styles.core.style_axis import apply_nature_axis_style
 from plot_styles.core.theme import PlotStyle, scaled_fig_size, use_style
@@ -34,7 +35,7 @@ def _coerce_numeric_clean(series: pd.Series) -> pd.Series:
                 # Observed malformed values like "0.0.317..."; remove extra first dots.
                 while s.count(".") > 1:
                     dot_idx = s.find(".")
-                    s = s[:dot_idx] + s[dot_idx + 1 :]
+                    s = s[:dot_idx] + s[dot_idx + 1:]
             return s
         return v
 
@@ -56,62 +57,89 @@ def _pick_row(df: pd.DataFrame) -> pd.Series:
     return df.iloc[0]
 
 
-def _draw_axis_break(ax_left, ax_right, *, color: str = "black", size: float = 0.012, linewidth: float = 1.2):
-    """Draw diagonal break marks between two horizontally adjacent axes."""
-    kwargs = dict(color=color, clip_on=False, linewidth=linewidth)
-    ax_left.plot((1 - size, 1 + size), (-size, +size), transform=ax_left.transAxes, **kwargs)
-    ax_left.plot((1 - size, 1 + size), (1 - size, 1 + size), transform=ax_left.transAxes, **kwargs)
-    ax_right.plot((-size, +size), (-size, +size), transform=ax_right.transAxes, **kwargs)
-    ax_right.plot((-size, +size), (1 - size, 1 + size), transform=ax_right.transAxes, **kwargs)
+def _draw_axis_break(ax_top, ax_bottom, slope, color='black', position='right', length=0.005, linewidth=1):
+    """
+    Add aligned diagonal break marks on both top and bottom axes.
+
+    Parameters:
+    - ax_top: Top axis object
+    - ax_bottom: Bottom axis object
+    - position: 'left' or 'right' to indicate break placement
+    - size: Size of the diagonal marks
+    - color: Color of the break lines
+    - linewidth: Line thickness
+    """
+
+    kwargs_bottom = dict(color=color, linewidth=linewidth, transform=ax_bottom.transAxes, clip_on=False)
+    kwargs_top = dict(color=color, linewidth=linewidth, transform=ax_top.transAxes, clip_on=False)
+
+    if position == 'right':
+        # Bottom axis break (right)
+        ax_bottom.plot((1 - slope['bottom'] * length, 1 + slope['bottom'] * length), (-length, length), **kwargs_bottom)
+
+        # Top axis break (right)
+        ax_top.plot((1 - slope['top'] * length, 1 + slope['top'] * length),
+                    (1 - length, 1 + length), **kwargs_top)
+
+    elif position == 'left':
+        # Bottom axis break (left)
+        ax_bottom.plot((-length, length), (-length, length), **kwargs_bottom)
+
+        # Top axis break (left)
+        ax_top.plot((-length, length), (1 - length, 1 + length), **kwargs_top)
 
 
 def plot_qe_poi(
-    data_df: pd.DataFrame,
-    *,
-    model_order: Sequence[str],
-    train_sizes: Sequence[int],
-    dataset_pretty: dict[str, str],
-    dataset_markers: dict[str, str] | None = None,
-    model_col: str = "model",
-    train_size_col: str = "train_size",
-    x_col: str = "concurrence",
-    xerr_col: str = "uncertainty",
-    delta_col: str = "deltaD",
-    significance_col: str | None = None,
-    d_offset: float = 1.0,
-    x_label: str = r"Observable $D$",
-    y_label: str = "Model",
-    dataset_label_fmt: str = "{pretty}",
-    left_panel_xlim: tuple[float, float] = (0.94, 1.04),
-    left_indicator_x: float = 1.0,
-    left_indicator_text: str = r"Separabel state ($D > 1$)",
-    left_indicator_color: str = "#a81228",
-    left_indicator_fontsize: float | None = None,
-    show_left_shading: bool = True,
-    left_shading_color: str = "grey",
-    left_shading_alpha: float = 0.22,
-    width_ratios: tuple[float, float] = (1.0, 4.0),
-    show_row_separators: bool = True,
-    right_x_min_factor: float = 0.95,
-    right_x_max_factor: float = 1.75,
-    text_x_shift_fraction: float = 0.025,
-    uncertainty_scale: float = 1.0,
-    concurrence_precision: int = 3,
-    uncertainty_precision: int = 4,
-    delta_precision: int = 2,
-    significance_precision: int = 2,  # kept for backward config compatibility
-    model_row_gap: float = 1.0,
-    intra_group_gap: float = 1.0,
-    text_font_family: str | None = None,
-    table_text_size: float | None = None,
-    col_pad: tuple[int, int, int] = (3, 4, 4),
-    header_gap: float = 0.24,
-    top_padding: float = 0.10,
-    bottom_padding: float = 0.45,
-    fig_size: tuple[float, float] = (15, 8),
-    fig_scale: float = 1.0,
-    fig_aspect: float | None = None,
-    style: PlotStyle | None = None,
+        data_df: pd.DataFrame,
+        *,
+        model_order: Sequence[str],
+        train_sizes: Sequence[int],
+        dataset_pretty: dict[str, str],
+        dataset_markers: dict[str, str] | None = None,
+        model_col: str = "model",
+        train_size_col: str = "train_size",
+        x_col: str = "concurrence",
+        xerr_col: str = "uncertainty",
+        delta_col: str = "deltaD",
+        significance_col: str | None = None,
+        d_offset: float = 1.0,
+        x_label: str = r"Observable $D$",
+        y_label: str = "Model",
+        dataset_label_fmt: str = "{pretty}",
+        left_panel_xlim: tuple[float, float] = (0.94, 1.04),
+        left_indicator_x: float = 1.0,
+        left_indicator_text: str = r"Separabel state ($D > 1$)",
+        left_indicator_color: str = "#a81228",
+        left_indicator_fontsize: float | None = None,
+        right_indicator_x: float | None = None,
+        right_indicator_color: str = "gray",
+        right_indicator_linestyle: str = "--",
+        right_indicator_linewidth: float = 2.0,
+        show_left_shading: bool = True,
+        left_shading_color: str = "grey",
+        left_shading_alpha: float = 0.22,
+        width_ratios: tuple[float, float] = (1.0, 4.0),
+        show_row_separators: bool = True,
+        right_x_min_factor: float = 0.95,
+        right_x_max_factor: float = 1.75,
+        text_x_shift_fraction: float = 0.025,
+        uncertainty_scale: float = 1.0,
+        concurrence_precision: int = 3,
+        uncertainty_precision: int = 4,
+        delta_precision: int = 2,
+        significance_precision: int = 2,  # kept for backward config compatibility
+        model_row_gap: float = 1.0,
+        intra_group_gap: float = 1.0,
+        text_font_family: str | None = None,
+        table_text_size: float | None = None,
+        col_pad: tuple[int, int, int] = (3, 4, 4),
+        header_gap: float = 0.24,
+        top_padding: float = 0.10,
+        bottom_padding: float = 0.45,
+        fig_size: tuple[float, float] = (15, 8),
+        fig_scale: float = 1.0,
+        fig_aspect: float | None = None,
+        style: PlotStyle | None = None,
 ) -> tuple:
     """Render QE POI summary with the classic broken-axis style."""
     if data_df is None or data_df.empty:
@@ -178,7 +206,8 @@ def plot_qe_poi(
     )
     if table_text_size is not None:
         text_size = table_text_size
-    left_text_size = left_indicator_fontsize if left_indicator_fontsize is not None else max(float(text_size) + 2.0, 14.0)
+    left_text_size = left_indicator_fontsize if left_indicator_fontsize is not None else max(float(text_size) + 2.0,
+                                                                                             14.0)
     row_line_width = 0.8 * marker_scale
 
     finite_d = []
@@ -190,7 +219,7 @@ def plot_qe_poi(
                 continue
             row = _pick_row(sub)
             d_val = _safe_float(row.get("_poi_d"))
-            u_val = abs(_safe_float(row.get(xerr_col))) * float(uncertainty_scale)
+            u_val = abs(_safe_float(row.get(xerr_col)))  # * float(uncertainty_scale)
             if np.isfinite(d_val):
                 finite_d.append(d_val)
                 finite_unc.append(u_val if np.isfinite(u_val) else 0.0)
@@ -202,6 +231,8 @@ def plot_qe_poi(
     u_arr = np.asarray(finite_unc, dtype=float)
     right_min = max(left_panel_xlim[1] + 0.02, float(np.nanmin(d_arr - u_arr) * right_x_min_factor))
     right_max = float(np.nanmax(d_arr + u_arr) * right_x_max_factor)
+    if right_indicator_x is not None:
+        right_max = max(right_max, float(right_indicator_x))
     if right_max <= right_min:
         right_max = right_min + 0.5
 
@@ -213,8 +244,8 @@ def plot_qe_poi(
     if show_row_separators and len(y_base) > 1:
         for idx in range(len(y_base) - 1):
             y_sep = 0.5 * (y_base[idx] + y_base[idx + 1])
-            ax_left.axhline(y_sep, color="0.75", linestyle="--", linewidth=row_line_width, zorder=0)
-            ax_right.axhline(y_sep, color="0.75", linestyle="--", linewidth=row_line_width, zorder=0)
+            ax_left.axhline(y_sep, color="0.75", linestyle=":", linewidth=row_line_width, zorder=0)
+            ax_right.axhline(y_sep, color="0.75", linestyle=":", linewidth=row_line_width, zorder=0)
 
     x_text = right_max - (right_max - right_min) * text_x_shift_fraction
     text_kwargs = {}
@@ -233,7 +264,7 @@ def plot_qe_poi(
 
             d_val = _safe_float(row.get("_poi_d"))
             unc_val = abs(_safe_float(row.get(xerr_col)))
-            unc_plot = unc_val * float(uncertainty_scale)
+            unc_plot = unc_val  # * float(uncertainty_scale)
             delta_val = _safe_float(row.get(delta_col))
             if not np.isfinite(d_val):
                 continue
@@ -248,7 +279,7 @@ def plot_qe_poi(
                     y_val,
                     xerr=np.array([[unc_plot], [unc_plot]]),
                     fmt=marker,
-                    markersize=8 * marker_scale,
+                    markersize=12 * marker_scale,
                     capsize=3.5 * marker_scale,
                     capthick=1.1 * marker_scale,
                     elinewidth=1.5 * marker_scale,
@@ -277,7 +308,8 @@ def plot_qe_poi(
                 delta_str = "n/a"
             size_label = dataset_pretty.get(str(size), f"{size}")
             d_str = f"{d_val:.{concurrence_precision}f}"
-            unc_str = f"{unc_plot:.{uncertainty_precision}f}" if np.isfinite(unc_plot) else "n/a"
+            unc_str = f"{unc_plot * float(uncertainty_scale):.{uncertainty_precision}f}" if np.isfinite(
+                unc_plot) else "n/a"
             row_entries.append(
                 {
                     "y": y_val,
@@ -291,59 +323,66 @@ def plot_qe_poi(
             )
 
     if row_entries:
-        size_header = "Size"
-        d_header = "D"
-        unc_header = rf"\sigma\times{uncertainty_scale:g}"
-        delta_header = rf"D / \sigma [\%]"
+        # --- headers (Nature-style, mathtext) ---
+        unc_header = rf"$\sigma \times {uncertainty_scale:g}$"
+        # unc_header = rf"$\sigma$"
+        prec_header = r"Precision"
 
-        size_w = max(len(size_header), max(len(r["size_raw"]) for r in row_entries))
-        d_w = max(len(d_header), max(len(r["d"]) for r in row_entries))
-        unc_w = max(len(unc_header), max(len(r["unc"]) for r in row_entries))
-        pad_size, pad_d, pad_unc = col_pad
+        # ax_right.text(
+        #     0.98, 1.01,  # (x, y) in AXES coordinates
+        #     r"$^{*}$ expressed in percent.",
+        #     transform=ax_right.transAxes,  # <-- key line
+        #     ha="right",
+        #     va="bottom",
+        #     fontsize=text_size * 0.75,
+        #     color="0.35",
+        #     zorder=5,
+        #     **text_kwargs,
+        # )
 
-        def _pad_math(text: str, width: int, extra: int) -> str:
-            return text + "~" * (max(width - len(text), 0) + extra)
+        font_kwargs = dict(fontsize=text_size, fontfamily="sans-serif")
 
-        for r in row_entries:
-            row_text = (
-                rf"$"
-                rf"{_pad_math(r['size_tex'], size_w, pad_size)}"
-                rf"{_pad_math(r['d'], d_w, pad_d)}"
-                rf"{_pad_math(r['unc'], unc_w, pad_unc)}"
-                rf"{r['delta']}"
-                rf"$"
-            )
-            ax_right.text(
-                x_text,
-                r["y"],
-                row_text,
-                ha="right",
-                va="center",
-                fontsize=text_size,
-                color=r["color"],
-                zorder=9,
-                **text_kwargs,
-            )
+        # --- two right-aligned columns ---
+        x_prec = x_text  # precision column (rightmost)
+        x_unc = x_prec - 0.005  # uncertainty column (tune if needed)
 
-        header_text = (
-            rf"$"
-            rf"{_pad_math(size_header, size_w, pad_size)}"
-            rf"{_pad_math(d_header, d_w, pad_d)}"
-            rf"{_pad_math(unc_header, unc_w, pad_unc)}"
-            rf"{delta_header}"
-            rf"$"
-        )
+        # ---- header ----
         ax_right.text(
-            x_text,
-            header_y,
-            header_text,
-            ha="right",
-            va="center",
-            fontsize=text_size,
-            color="black",
-            zorder=10,
-            **text_kwargs,
+            x_unc, header_y,
+            unc_header,
+            ha="center", va="center",
+            color="black", zorder=10,
+            **font_kwargs, **text_kwargs,
         )
+
+        ax_right.text(
+            x_prec, header_y,
+            prec_header,
+            ha="center", va="center",
+            color="black", zorder=10,
+            **font_kwargs, **text_kwargs,
+        )
+
+        # ---- rows ----
+        for r in row_entries:
+            # left column: uncertainty (already scaled)
+            ax_right.text(
+                x_unc, r["y"],
+                rf"${r['unc']}$",
+                ha="center", va="center",
+                color=r["color"], zorder=9,
+                **font_kwargs, **text_kwargs,
+            )
+
+            # right column: precision in %
+            # r["delta"] MUST already be: 100 * sigma / (D - 1)
+            ax_right.text(
+                x_prec, r["y"],
+                rf"${r['delta']}$%",
+                ha="center", va="center",
+                color=r["color"], zorder=9,
+                **font_kwargs, **text_kwargs,
+            )
 
     model_labels = [MODEL_PRETTY.get(model, model) for model in active_models]
 
@@ -365,7 +404,22 @@ def plot_qe_poi(
     ax_left.spines["right"].set_visible(False)
     ax_right.spines["left"].set_visible(False)
     ax_right.tick_params(left=False, labelleft=False)
-    _draw_axis_break(ax_left, ax_right, linewidth=1.4 * marker_scale)
+    ax_right.xaxis.set_major_locator(MaxNLocator(nbins=4, prune="both"))
+
+    # Add top axis (with same break points) for both panels
+    ax_top_left = ax_left.twiny()
+    ax_top_right = ax_right.twiny()
+    ax_top_left.spines["right"].set_visible(False)
+    ax_top_right.spines["left"].set_visible(False)
+    ax_top_left.tick_params(top=False, labeltop=False)
+    ax_top_right.tick_params(top=False, labeltop=False)
+
+    slope = {
+        "bottom": 3.0,
+        "top": 3.0,
+    }
+    _draw_axis_break(ax_top_left, ax_left, position="right", slope=slope)
+    _draw_axis_break(ax_top_right, ax_right, position="left", slope=slope)
 
     if show_left_shading:
         shade_min = min(left_panel_xlim[0], left_indicator_x)
@@ -391,7 +445,7 @@ def plot_qe_poi(
         zorder=2,
     )
     ax_left.text(
-        0.62,
+        0.73,
         0.5,
         left_indicator_text,
         ha="left",
@@ -401,9 +455,18 @@ def plot_qe_poi(
         rotation=90,
         transform=ax_left.transAxes,
     )
+    if right_indicator_x is not None:
+        ax_right.axvline(
+            x=right_indicator_x,
+            color=right_indicator_color,
+            linestyle=right_indicator_linestyle,
+            linewidth=right_indicator_linewidth * marker_scale,
+            alpha=0.85,
+            zorder=2,
+        )
 
     if hasattr(fig, "supxlabel"):
-        fig.supxlabel(x_label)
+        fig.supxlabel(x_label, va="top", y=0.02, size=text_size * 1.1, **text_kwargs)
     else:
         fig.text(0.5, 0.01, x_label, ha="center")
 

@@ -17,12 +17,12 @@
 # }
 
 BASE_MODEL_COLORS = {
-    "SSL":      "#D55E00",   # distinct muted teal-green (large separation)
-    "Nominal":  "#0072B2",   # fixed
-    "Ablation": "#3E5F78",   # darker blue-grey for strong contrast
-    "Scratch":  "#E69F00",   # fixed
-    "Ref.":     "#9A9A9A",   # neutral grey
-    "SPANet":   "#9A9A9A",   # same grey for grouping
+    "SSL":      "#D55E00",
+    "Nominal":  "#0072B2",
+    "Ablation": "#3E5F78",
+    "Scratch":  "#E69F00",
+    "Ref.":     "#9A9A9A",
+    "SPANet":   "#9A9A9A",
     "XGBoost":  "#009E73",
     "TabPFN":   "#CC79A7",
 }
@@ -98,10 +98,10 @@ HEAD_LINESTYLES = {
 
 AD_MASS_FPR_ORDER = [-1.0, 1.0, 0.3, 0.1, 0.01, 0.001]
 AD_MASS_FPR_COLORS = {
-    -1.0: "#4D4D4D",
-    1.0: "#E69F00",
-    0.3: "#009E73",
-    0.1: "#0072B2",
+    -1.0: "#CC79A7",
+    1.0: "#fdae61",
+    0.3: "#74add1",
+    0.1: "#66c2a5",
     0.01: "#CC79A7",
     0.001: "#D55E00",
 }

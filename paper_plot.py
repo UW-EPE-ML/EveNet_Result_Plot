@@ -108,8 +108,8 @@ DEFAULT_QE_CONFIG = {
     },
     "poi": {
         "enabled": True,
-        "fig_size": (13, 7),
-        "x_label": r"Observable $D$",
+        "fig_size": (13, 5.5),
+        "x_label": r"D",
         "y_label": "",
         "x_col": "concurrence",
         "xerr_col": "uncertainty",
@@ -117,14 +117,17 @@ DEFAULT_QE_CONFIG = {
         "significance_col": None,
         "d_offset": 1.0,
         "dataset_label_fmt": "{pretty}",
-        "left_panel_xlim": (0.98, 1.02),
+        "left_panel_xlim": (0.99, 1.005),
         "left_indicator_x": 1.0,
         "left_indicator_text": r"Separable state ($D = 1$)",
+        "right_indicator_x": 1.3172751210597295,
+        "right_indicator_color": "gray",
+        "right_indicator_linestyle": "--",
         "show_row_separators": True,
-        "right_x_min_factor": 0.95,
-        "right_x_max_factor": 1.125,
-        "text_x_shift_fraction": 0.025,
-        "uncertainty_scale": 10.0,
+        "right_x_min_factor": 0.999,
+        "right_x_max_factor": 1.01,
+        "text_x_shift_fraction": 0.09,
+        "uncertainty_scale": 100,
         "model_row_gap": 1.0,
         "intra_group_gap": 0.85,
         "table_text_size": 16,
@@ -133,14 +136,14 @@ DEFAULT_QE_CONFIG = {
         "top_padding": 0.15,
         "bottom_padding": 0.45,
         "concurrence_precision": 2,
-        "uncertainty_precision": 3,
+        "uncertainty_precision": 2,
         "delta_precision": 2,
         "significance_precision": 2,
-        "width_ratios": (1.0, 4.0),
+        "width_ratios": (1.0, 6.0),
         "legend": {
             "legends": ["dataset", "models"],
         },
-        "style": DEFAULT_STYLE,
+        "style": PlotStyle(base_font_size=17.0, tick_label_size=15.0),
     },
     "systematics": {
         "pairing": {
@@ -149,10 +152,11 @@ DEFAULT_QE_CONFIG = {
                 base_font_size=20.0, tick_label_size=19.0, axis_label_size=19.0,
                 legend_size=17.0, legend_anchor=(0.88, 0.07), legend_loc="lower right",
             ),
+            "hide_x_axis_text": False,
             "x_label": r"$\Delta_\epsilon^\mathrm{pair} = (\epsilon^\mathrm{pair}-\mu_\epsilon^\mathrm{pair})$",
             "cmap": LinearSegmentedColormap.from_list(
                 "custom_jes",
-                ["#3F5EFB", "#E5ECF6", "#FC466B", ],  # low → mid → high
+                ["#0072B2", "#E5ECF6", "#D55E00", ],  # low → mid → high
                 N=256
             ),
             "colorbar_label": r"$\alpha_\mathrm{JES}$ [%]",
@@ -171,15 +175,16 @@ DEFAULT_QE_CONFIG = {
             ],
         },
         "precision": {
-            "fig_size": (13, 2.25),
+            "fig_size": (10, 2.35),
             "style": PlotStyle(
                 base_font_size=20.0, tick_label_size=19.0, axis_label_size=19.0,
                 legend_size=17.0, legend_anchor=(0.88, 0.07), legend_loc="lower right",
             ),
-            "x_label": r"$\Delta_D = \sigma_D-\mu_{\sigma_D}$",
+            "hide_x_axis_text": False,
+            "x_label": r"$\Delta_{\sigma_D} = \sigma_D-\mu_{\sigma_D}$",
             "cmap": LinearSegmentedColormap.from_list(
                 "custom_precision",
-                ["#3F5EFB", "#E5ECF6", "#FC466B", ],
+                ["#0072B2", "#E5ECF6", "#D55E00", ],
                 N=256
             ),
             "colorbar_label": r"$\alpha_\mathrm{JES}$ [%]",
@@ -190,10 +195,10 @@ DEFAULT_QE_CONFIG = {
             "suffix": "precision",
             "label": "Precision (normalized)",
             "noise_names": [
-                {"name": "jes_only", "label": "JES", "color_col": "syst_jes"},
+                {"name": "jes_only", "label": "JES", "color_col": "syst_jes", "hide_x_axis_text": True},
                 {
                     "name": "met_only", "label": "MET", "color_col": "syst_met", "clim_min": 0.0, "clim_max": 5.0,
-                    "colorbar_label": r"$E_{T}^\mathrm{miss}$ [GeV]",
+                    "colorbar_label": r"$E_{T}^\mathrm{miss}$ [GeV]", "hide_x_axis_text": False,
                 },
             ],
         },
@@ -398,7 +403,7 @@ DEFAULT_AD_CONFIG = {
             "enabled": True,
             "fpr_thresholds": [-1.0],
             "height_ratio": (2, 1),
-            "y_label": "Bkg-Sub Yield \n ($\\ell$-reweighted)",
+            "y_label": "Data - Pred. \n ($\\ell$-reweighted)",
             # "y_min": -10,
             # "y_max": 30,
             "nbins": 2,

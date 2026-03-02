@@ -422,10 +422,10 @@ def plot_ad_mass_distribution(
                 masses,
                 bins=plot_bins_all,
                 histtype="step",
-                linewidth=2.4,
+                linewidth=3.0,
                 color=color,
                 label=label,
-                alpha=0.9,
+                alpha=1.0,
                 weights=hist_weights,
             )
 
@@ -437,9 +437,9 @@ def plot_ad_mass_distribution(
                 residual,
                 plot_bins_all,
                 color=color,
-                linewidth=2.0,
+                linewidth=3.0,
                 baseline=0.0,
-                alpha=0.95,
+                alpha=1.0,
             )
 
         threshold_rows.append(
